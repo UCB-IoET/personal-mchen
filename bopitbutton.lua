@@ -38,3 +38,4 @@ end
 
 sh.start()
 cord.enter_loop()
+start()

@@ -1,3 +1,5 @@
+require "cord"
+sh = require "stormsh"
 Button = require "Button"
 LED = require "Led"
 
@@ -13,23 +15,26 @@ csock = storm.net.udpsocket(port,
 
 function sendCommand(axis)
 	local msg = string.format("%s", axis)
-	print("send:", msg)
+	print("sent: ", msg, " count: ",  count)
 	storm.net.sendto(csock, msg, "ff02::1", port)
 	count = count +1 
 end
 
 
 function start()
-	b1 = Button:new(storm.io.D9)
-	b2 = Button:new(storm.io.D10)
-	b3 = Button:new(storm.io.D11)
-	b1:whenever(storm.io.FALLING, function()
+	b1 = Button:new("D9")
+	b2 = Button:new("D10")
+	b3 = Button:new("D11")
+	b1:whenever("FALLING", function()
 		sendCommand("x")
 	end)
-	b2:whenever(storm.io.FALLING, function()
+	b2:whenever("FALLING", function()
 		sendCommand("y")
 	end)
-	b3:whenever(storm.io.FALLING, function()
+	b3:whenever("FALLING", function()
 		sendCommand("z")
 	end)
 end
+
+sh.start()
+cord.enter_loop()

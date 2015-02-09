@@ -16,6 +16,7 @@ end)
 port = 227
 dodgeTime = 2000
 THRESHOLD = 1000
+score = 0
 -- create echo server as handler
 server = function()
    ssock = storm.net.udpsocket(port,
@@ -41,14 +42,16 @@ dodgeCheckLoop = function(startACC, startTime, direction)
 	delta["z"] = z - startACC["z"]
 	print(string.format("deltas: %d %d %d\n", delta["x"], delta["y"], delta["z"]))	
 	if(math.abs(delta[direction]) > THRESHOLD) then
-		print("Successful Dodge!")
+		score = score + 1
+		print("Successful Dodge! Score is now: "..score)
 		return
 	end
 	
 	local curTime = storm.os.now(storm.os.SHIFT_0)/storm.os.MILLISECOND
 	--you didn't dodge, so check for timeout	
 	if(curTime - startTime > dodgeTime) then
-		print("You Failed to Dodge!")
+		score = score - 1
+		print("You Failed to Dodge! Score is now "..score)		
 		return
 	else
 		cord.await(storm.os.invokeLater,200*storm.os.MILLISECOND);

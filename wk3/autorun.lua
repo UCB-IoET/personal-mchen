@@ -1,6 +1,8 @@
 require "cord"
 sh = require "stormsh"
 
+local set = "set"
+
 function printServicePairs(t)
 	for k,v in pairs(t) do
 		if k == "id"  or k == "t" then
@@ -28,7 +30,10 @@ local sock = storm.net.udpsocket(port,
 		print(string.format("Services from %s", from))
 		printServicePairs(response)
 		if response["t"] == nil then response["t"] = storm.os.now(storm.os.SHIFT_16) end
-		remote_services[from] = response
+		if response[s] == "setBool" or response[s] == "setLed" then
+			response[set] = false
+			remote_services[from] = response
+		end
 		end)
 
 local svc_manifest = {id="MacNCheese", writeStdout={s="setString", desc="write stdout"}, getNow={s="getNumber", desc="time now"}}

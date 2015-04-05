@@ -1,0 +1,14 @@
+<resources>
+    <string name="app_name">ChairTalk</string>
+
+    <string name="hello_world">Hello world!</string>
+    <string name="action_settings">Settings</string>
+    <string name="heat_section">Heat Settings</string>
+    <string name="fan_section">Cooling Settings</string>
+    <string name="seek_back_heat">Back Heat</string>
+    <string name="seek_bottom_heat">Bottom Heat</string>
+    <string name="seek_back_fan">Back Fan</string>
+    <string name="seek_bottom_fan">Bottom Fan</string>
+    <string name="temp_preference_file_key">com.michaelchen.chairtalk.heat_fans</string>
+    <string name="in_chair_key">user.in_chair</string>
+</resources>

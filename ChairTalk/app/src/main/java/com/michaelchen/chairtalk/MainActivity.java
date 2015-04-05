@@ -2,8 +2,10 @@ package com.michaelchen.chairtalk;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.os.AsyncTask;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -14,6 +16,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
@@ -21,6 +24,10 @@ import org.apache.http.message.BasicHeader;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.Locale;
 
 
@@ -30,7 +37,7 @@ public class MainActivity extends ActionBarActivity {
     private SeekBar seekBackFan;
     private SeekBar seekBottomHeat;
     private SeekBar seekBackHeat;
-    private String uri = "shell.storm.pm:38027";
+    private static final String uri = "http://shell.storm.pm:38027";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -178,7 +185,7 @@ public class MainActivity extends ActionBarActivity {
         int bottomHeatPos = sharedPref.getInt(getString(R.string.seek_bottom_heat), 0);
         boolean inChair = sharedPref.getBoolean(getString(R.string.in_chair_key), false);
         JSONObject jsonobj = createJsonObject(backFanPos, bottomFanPos, backHeatPos, bottomHeatPos, inChair);
-        sendHttpPost(jsonobj);
+        new HttpAsyncTask(jsonobj).execute(uri);
         TextView t = (TextView) findViewById(R.id.textViewJson);
         t.setText(jsonobj.toString());
     }
@@ -207,21 +214,49 @@ public class MainActivity extends ActionBarActivity {
         return jsonobj;
     }
 
-    private boolean sendHttpPost(JSONObject jsonobj) {
-        try {
-            DefaultHttpClient httpclient = new DefaultHttpClient();
-            HttpPost httppostreq = new HttpPost(uri);
-            StringEntity se = new StringEntity(jsonobj.toString());
-            se.setContentType("application/json;charset=UTF-8");
-            se.setContentEncoding(new BasicHeader("HTTP.CONTENT_TYPE", "application/json;charset=UTF-8"));
-            httppostreq.setEntity(se);
-            HttpResponse httpresponse = httpclient.execute(httppostreq);
-            Toast.makeText(this, "sent json", Toast.LENGTH_SHORT);
-            return true;
-        } catch (Exception e) {
-            Toast.makeText(this, "failed to send json", Toast.LENGTH_SHORT);
-            return false;
+    private class HttpAsyncTask extends AsyncTask<String, Void, Boolean> {
+        private JSONObject jsonobj;
+        public HttpAsyncTask(JSONObject jsonobj) {
+            super();
+            this.jsonobj = jsonobj;
         }
+        @Override
+        protected Boolean doInBackground(String...urls) {
+            try {
+                DefaultHttpClient httpclient = new DefaultHttpClient();
+                HttpPost httpPostReq = new HttpPost(uri);
+                StringEntity se = new StringEntity(jsonobj.toString());
+
+                httpPostReq.setEntity(se);
+                httpPostReq.setHeader("Accept", "application/json");
+                httpPostReq.setHeader("Content-type", "application/json");
+                HttpResponse httpResponse = httpclient.execute(httpPostReq);
+                InputStream inputStream = httpResponse.getEntity().getContent();
+                String response = inputStreamToString(inputStream);
+                Log.d("httpPost", response);
+                return true;
+            } catch (Exception e) {
+                Log.d("httpPost", "failed");
+                return false;
+            }
+        }
+        // onPostExecute displays the results of the AsyncTask.
+        protected void onPostExecute(String result) {
+            Log.d("httpPost", result);
+            Toast.makeText(getBaseContext(), "Data Sent!", Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private static String inputStreamToString(InputStream inputStream) throws IOException {
+        BufferedReader bufferedReader = new BufferedReader( new InputStreamReader(inputStream));
+        String line = "";
+        String result = "";
+        while((line = bufferedReader.readLine()) != null)
+            result += line;
+
+        inputStream.close();
+        return result;
+
     }
 
     @Override

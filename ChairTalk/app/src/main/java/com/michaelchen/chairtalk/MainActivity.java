@@ -28,6 +28,9 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Locale;
 
 
@@ -46,6 +49,7 @@ public class MainActivity extends ActionBarActivity {
         initSeekbarListeners();
         initSeekbarPositions();
         initSwitch();
+        updateLastUpdate();
     }
 
     protected void initSeekbarListeners() {
@@ -134,6 +138,18 @@ public class MainActivity extends ActionBarActivity {
     }
 
 
+    protected void updateLastUpdate() {
+        SharedPreferences sharedPref = this.getSharedPreferences(
+                getString(R.string.temp_preference_file_key), Context.MODE_PRIVATE);
+        long lastUpdateTime = sharedPref.getLong(getString(R.string.last_server_push_key), -1);
+        if (lastUpdateTime != -1) {
+            Date time = new Date(lastUpdateTime);
+            TextView t = (TextView) findViewById(R.id.textViewlastUpdateTime);
+            DateFormat df = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss");
+            t.setText("Last Update: " + df.format(time));
+        }
+    }
+
     protected void initSwitch() {
         SharedPreferences sharedPref = this.getSharedPreferences(
                 getString(R.string.temp_preference_file_key), Context.MODE_PRIVATE);
@@ -162,6 +178,16 @@ public class MainActivity extends ActionBarActivity {
                 getString(R.string.temp_preference_file_key), Context.MODE_PRIVATE);
         SharedPreferences.Editor e = sharedPref.edit();
         e.putInt(key, value);
+        e.apply();
+        return e.commit();
+    }
+
+    protected boolean updatePref(String key, long value) {
+        // update heating or cooling
+        SharedPreferences sharedPref = MainActivity.this.getSharedPreferences(
+                getString(R.string.temp_preference_file_key), Context.MODE_PRIVATE);
+        SharedPreferences.Editor e = sharedPref.edit();
+        e.putLong(key, value);
         e.apply();
         return e.commit();
     }
@@ -238,6 +264,10 @@ public class MainActivity extends ActionBarActivity {
                     @Override
                     public void run() {
                         Toast.makeText(getBaseContext(), "Post Result: " + response, Toast.LENGTH_SHORT).show();
+                        Date now = new Date();
+                        long time = now.getTime();
+                        MainActivity.this.updatePref(getString(R.string.last_server_push_key), time);
+                        MainActivity.this.updateLastUpdate();
                     }
                 });
                 return true;

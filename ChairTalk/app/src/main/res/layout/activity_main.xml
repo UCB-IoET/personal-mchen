@@ -113,6 +113,12 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:text="Last Update: Never"
+            android:id="@+id/textViewlastUpdateTime" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
             android:text="Json Text"
             android:id="@+id/textViewJson"/>
     </LinearLayout>

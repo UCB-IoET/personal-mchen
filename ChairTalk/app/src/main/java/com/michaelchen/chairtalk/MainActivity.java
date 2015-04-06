@@ -232,8 +232,14 @@ public class MainActivity extends ActionBarActivity {
                 httpPostReq.setHeader("Content-type", "application/json");
                 HttpResponse httpResponse = httpclient.execute(httpPostReq);
                 InputStream inputStream = httpResponse.getEntity().getContent();
-                String response = inputStreamToString(inputStream);
+                final String response = inputStreamToString(inputStream);
                 Log.d("httpPost", response);
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        Toast.makeText(getBaseContext(), "Post Result: " + response, Toast.LENGTH_SHORT).show();
+                    }
+                });
                 return true;
             } catch (Exception e) {
                 Log.d("httpPost", "failed");
@@ -242,8 +248,7 @@ public class MainActivity extends ActionBarActivity {
         }
         // onPostExecute displays the results of the AsyncTask.
         protected void onPostExecute(String result) {
-            Log.d("httpPost", result);
-            Toast.makeText(getBaseContext(), "Data Sent!", Toast.LENGTH_LONG).show();
+
         }
     }
 

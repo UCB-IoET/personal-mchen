@@ -25,13 +25,22 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.PrintWriter;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.Inet4Address;
+import java.net.InetAddress;
+import java.net.Socket;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
+import java.util.jar.Pack200;
 
 
 public class MainActivity extends ActionBarActivity {
@@ -40,8 +49,8 @@ public class MainActivity extends ActionBarActivity {
     private SeekBar seekBackFan;
     private SeekBar seekBottomHeat;
     private SeekBar seekBackHeat;
-    private static final String uri = "http://shell.storm.pm:38027";
-
+//    private static final String uri = "http://shell.storm.pm:38027";
+    private static final String uri = "http://54.215.11.207:38027";
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -270,6 +279,8 @@ public class MainActivity extends ActionBarActivity {
                         MainActivity.this.updateLastUpdate();
                     }
                 });
+
+                client(jsonobj);
                 return true;
             } catch (Exception e) {
                 Log.d("httpPost", "failed");
@@ -307,5 +318,33 @@ public class MainActivity extends ActionBarActivity {
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    public static void client(JSONObject jsonObject) throws IOException {
+        DatagramSocket clientSocket = new DatagramSocket(2362);
+        InetAddress IPAddress =  InetAddress.getByName("storm.rocks");
+
+        byte[] sendData = jsonObject.toString().getBytes();
+
+        DatagramPacket sendPacket = new DatagramPacket(sendData,sendData.length, IPAddress, 2362);
+        clientSocket.send(sendPacket);
+//        byte[] receiveData = new byte[1024];
+//        DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
+//        clientSocket.receive(receivePacket);
+//        String modifiedSentence = new String(receivePacket.getData());
+//        Log.d("UDP", modifiedSentence);
+        clientSocket.close();
+
+//        Socket socket = new Socket("192.168.1.102", 2362);
+//        OutputStream out = socket.getOutputStream();
+//        PrintWriter output = new PrintWriter(out);
+//        output.print(jsonObject.toString());
+//        out.flush();
+//        out.close();
+
+        Log.d("UDP", "send ok");
+
+        // }
+
     }
 }

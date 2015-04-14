@@ -96,24 +96,30 @@
             android:id="@+id/seekBarBottomHeat"
             android:max="100"/>
 
-        <Switch
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Sitting In Chair"
-            android:id="@+id/switchInChair"
-            android:hint="Sitting In Chair" />
+        <!--<Button-->
+            <!--android:layout_width="wrap_content"-->
+            <!--android:layout_height="wrap_content"-->
+            <!--android:text="Query"-->
+            <!--android:id="@+id/queryButton"-->
+            <!--android:onClick="querySmapView"/>-->
 
-        <Button
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Send JSON"
-            android:id="@+id/buttonJson"
-            android:onClick="smapButton"/>
+        <!--<Button-->
+            <!--android:layout_width="wrap_content"-->
+            <!--android:layout_height="wrap_content"-->
+            <!--android:text="Send JSON"-->
+            <!--android:id="@+id/buttonJson"-->
+            <!--android:onClick="smapButton"/>-->
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Last Update: Never"
+            android:text="Last Update (Pull): Never"
+            android:id="@+id/textViewlastPullTime" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Last Update(Push): Never"
             android:id="@+id/textViewlastUpdateTime" />
 
         <TextView

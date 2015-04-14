@@ -52,7 +52,8 @@ public class MainActivity extends ActionBarActivity {
 //    private static final String uri = "http://54.215.11.207:38027";
     private static final String uri = "http://54.215.11.207:38001";
     public static final int refreshPeriod = 5000;
-    private Timer timer;
+    public static final int smapDelay = 8000;
+    private Timer timer = null;
     private TimerTask timerTask;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -63,20 +64,6 @@ public class MainActivity extends ActionBarActivity {
 //        initSwitch();
         initMaps();
         updateLastUpdate();
-        timer = new Timer();
-        timerTask = new TimerTask() {
-            @Override
-            public void run() {
-                MainActivity.this.querySmapView(null);
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        MainActivity.this.updateLastPullTime();
-                    }
-                });
-            }
-        };
-        timer.scheduleAtFixedRate(timerTask, 0, refreshPeriod);
     }
 
     private void initMaps() {
@@ -91,6 +78,18 @@ public class MainActivity extends ActionBarActivity {
             keyToUuid.put(entry.getValue(), entry.getKey());
         }
 
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        rescheduleTimer(0);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        timer.cancel();
     }
 
     protected void initSeekbarListeners() {
@@ -248,37 +247,39 @@ public class MainActivity extends ActionBarActivity {
         int bottomHeatPos = sharedPref.getInt(getString(R.string.seek_bottom_heat), 0);
         boolean inChair = sharedPref.getBoolean(getString(R.string.in_chair_key), false);
 //        JSONObject jsonobj = createJsonObject(backFanPos, bottomFanPos, backHeatPos, bottomHeatPos, inChair);
-        JSONObject jsonobj = tempCreateJsonObject(backFanPos, bottomFanPos, backHeatPos, bottomHeatPos, inChair);
-        new HttpAsyncTask(jsonobj).execute(uri);
+        JSONObject jsonobj = createJsonObject(backFanPos, bottomFanPos, backHeatPos, bottomHeatPos, inChair);
+        HttpAsyncTask task = new HttpAsyncTask(jsonobj);
+        task.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, uri);
+    }
+
+    protected void updateJsonText(JSONObject jsonobj) {
         TextView t = (TextView) findViewById(R.id.textViewJson);
         t.setText(jsonobj.toString());
     }
 
-    private JSONObject tempCreateJsonObject(int backFan, int bottomFan, int backHeat, int bottomHeat, boolean inChair) {
-        JSONObject jsonobj = new JSONObject();
-        JSONObject header = new JSONObject();
-        try {
-            header.put("devicemodel", android.os.Build.MODEL); // Device model
-            header.put("deviceVersion", android.os.Build.VERSION.RELEASE); // Device OS version
-            header.put("language", Locale.getDefault().getISO3Language()); // Language
-//            jsonobj.put("header", header);
-
-            jsonobj.put("fans", (backFan + bottomFan)/2);
-//            jsonobj.put("bottomFan", bottomFan);
-            jsonobj.put("heaters", (backHeat + bottomHeat)/2);
-//            jsonobj.put("bottomHeater", bottomHeat);
-            jsonobj.put("macaddr", "12345");
-        } catch (JSONException e) {
-
-        }
-        return jsonobj;
+    private void rescheduleTimer() {
+        rescheduleTimer(smapDelay);
     }
 
-    private void rescheduleTimer() {
+    private void rescheduleTimer(int delay) {
 //        TODO: Fix timer rescheduling
-//        timer.cancel();
-//        timer = new Timer();
-//        timer.scheduleAtFixedRate(timerTask, refreshPeriod, refreshPeriod);
+        if (timer != null) {
+            timer.cancel();
+        }
+        timer = new Timer();
+        timerTask = new TimerTask() {
+            @Override
+            public void run() {
+                MainActivity.this.querySmapView(null);
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        MainActivity.this.updateLastPullTime();
+                    }
+                });
+            }
+        };
+        timer.scheduleAtFixedRate(timerTask, delay, refreshPeriod);
     }
 
     public void smapButton(View view) {
@@ -296,10 +297,11 @@ public class MainActivity extends ActionBarActivity {
             jsonobj.put("header", header);
 
             jsonobj.put("occupancy", inChair);
-            jsonobj.put("backFan", backFan);
-            jsonobj.put("bottomFan", bottomFan);
-            jsonobj.put("backHeater", backHeat);
-            jsonobj.put("bottomHeater", bottomHeat);
+            jsonobj.put("backf", backFan);
+            jsonobj.put("bottomf", bottomFan);
+            jsonobj.put("backh", backHeat);
+            jsonobj.put("bottomh", bottomHeat);
+            jsonobj.put("macaddr", "12345");
         } catch (JSONException e) {
 
         }
@@ -322,6 +324,7 @@ public class MainActivity extends ActionBarActivity {
                 httpPostReq.setEntity(se);
                 httpPostReq.setHeader("Accept", "application/json");
                 httpPostReq.setHeader("Content-type", "application/json");
+                Log.d("httpPost", "starting execution");
                 HttpResponse httpResponse = httpclient.execute(httpPostReq);
                 InputStream inputStream = httpResponse.getEntity().getContent();
                 final String response = inputStreamToString(inputStream);
@@ -329,17 +332,24 @@ public class MainActivity extends ActionBarActivity {
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        Toast.makeText(getBaseContext(), "Post Result: " + response, Toast.LENGTH_SHORT).show();
+//                        Toast.makeText(getBaseContext(), "Post Result: " + response, Toast.LENGTH_SHORT).show();
                         Date now = new Date();
                         long time = now.getTime();
                         MainActivity.this.updatePref(getString(R.string.last_server_push_key), time);
                         MainActivity.this.updateLastUpdate();
+                        MainActivity.this.updateJsonText(jsonobj);
                     }
                 });
 
                 return true;
             } catch (Exception e) {
                 Log.d("httpPost", "failed");
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        Toast.makeText(getBaseContext(), "Please Check Connection", Toast.LENGTH_SHORT).show();
+                    }
+                });
                 return false;
             }
         }
@@ -401,7 +411,7 @@ public class MainActivity extends ActionBarActivity {
                             runOnUiThread(new Runnable() {
                                 @Override
                                 public void run() {
-                                    Toast.makeText(getBaseContext(), "Post Failed", Toast.LENGTH_SHORT).show();
+                                    Toast.makeText(getBaseContext(), "Please Check Connection", Toast.LENGTH_SHORT).show();
                                 }
                             });
                         }

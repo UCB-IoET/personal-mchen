@@ -1,6 +1,10 @@
 package com.michaelchen.chairtalk;
 
+import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothSocket;
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.AsyncTask;
 import android.support.v7.app.ActionBarActivity;
@@ -26,6 +30,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
+import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -38,6 +43,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.UUID;
 
 
 public class MainActivity extends ActionBarActivity {
@@ -48,13 +54,18 @@ public class MainActivity extends ActionBarActivity {
     private SeekBar seekBackHeat;
     protected Map<String, String> uuidToKey;
     protected Map<String, String> keyToUuid;
+    static final String DEVICEKEY = "device_key_intent";
 //    private static final String uri = "http://shell.storm.pm:38027";
 //    private static final String uri = "http://54.215.11.207:38027";
     private static final String uri = "http://54.215.11.207:38001";
+//    private static final String uri = "http://shell.storm.pm:38001";
+//    private static final String uri = "http://192.31.105.139:38001";
     public static final int refreshPeriod = 5000;
-    public static final int smapDelay = 8000;
+    public static final int smapDelay = 12000;
     private Timer timer = null;
     private TimerTask timerTask;
+    private BluetoothDevice bluetoothDevice;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -64,6 +75,10 @@ public class MainActivity extends ActionBarActivity {
 //        initSwitch();
         initMaps();
         updateLastUpdate();
+        Intent i = getIntent();
+        if (i.hasExtra(DEVICEKEY)) {
+            bluetoothDevice = i.getParcelableExtra(DEVICEKEY);
+        }
     }
 
     private void initMaps() {
@@ -83,6 +98,13 @@ public class MainActivity extends ActionBarActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        SharedPreferences sharedPref = this.getSharedPreferences(
+                getString(R.string.temp_preference_file_key), Context.MODE_PRIVATE);
+        if (sharedPref.getBoolean("first_launch", true)) {
+            Intent i = new Intent(this, Tutorial.class);
+            startActivity(i);
+//            sharedPref.edit().putBoolean("first_launch", false).commit();
+        }
         rescheduleTimer(0);
     }
 
@@ -201,13 +223,6 @@ public class MainActivity extends ActionBarActivity {
         }
     }
 
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_main, menu);
-        return true;
-    }
-
     protected boolean updatePref(String key, int value) {
         // update heating or cooling
         SharedPreferences sharedPref = MainActivity.this.getSharedPreferences(
@@ -296,7 +311,7 @@ public class MainActivity extends ActionBarActivity {
             header.put("language", Locale.getDefault().getISO3Language()); // Language
             jsonobj.put("header", header);
 
-            jsonobj.put("occupancy", inChair);
+//            jsonobj.put("occupancy", inChair);
             jsonobj.put("backf", backFan);
             jsonobj.put("bottomf", bottomFan);
             jsonobj.put("backh", backHeat);
@@ -432,9 +447,31 @@ public class MainActivity extends ActionBarActivity {
         }
     }
 
+    public void readBT(View v) {
+        if (bluetoothDevice == null) return;
+        try {
+            BluetoothSocket socket = bluetoothDevice.createRfcommSocketToServiceRecord(UUID.fromString("00001101-0000-1000-8000-00805F9B34FB"));
+            socket.connect();
+            InputStream i = socket.getInputStream();
+            String result = inputStreamToString(i);
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
     private void querySmap(String uuid) {
         new SmapQueryAsyncTask(uuid).execute("http://shell.storm.pm:8079/api/query");
     }
+
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the menu; this adds items to the action bar if it is present.
+        getMenuInflater().inflate(R.menu.menu_main, menu);
+        return true;
+    }
+
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
@@ -444,8 +481,11 @@ public class MainActivity extends ActionBarActivity {
         int id = item.getItemId();
 
         //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
+        switch(id) {
+            case R.id.action_settings:
+                return true;
+            case R.id.action_bluetooth:
+                startActivity(new Intent(this, BluetoothActivity.class));
         }
 
         return super.onOptionsItemSelected(item);

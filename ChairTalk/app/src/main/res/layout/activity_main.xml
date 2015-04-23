@@ -110,6 +110,13 @@
             <!--android:id="@+id/buttonJson"-->
             <!--android:onClick="smapButton"/>-->
 
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="New Button"
+            android:id="@+id/button"
+            android:onClick="readBT"/>
+
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

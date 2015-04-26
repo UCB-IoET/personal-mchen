@@ -38,7 +38,7 @@ public class BluetoothActivity extends ListActivity{
     private BluetoothAdapter mBluetoothAdapter;
     private boolean mScanning;
     private Handler mHandler;
-    private static final int REQUEST_ENABLE_BT = 1;
+    static final int REQUEST_ENABLE_BT = 1;
     // Stops scanning after 10 seconds.
     private static final long SCAN_PERIOD = 10000;
     private BluetoothGatt mBluetoothGatt;
@@ -55,6 +55,8 @@ public class BluetoothActivity extends ListActivity{
             getActionBar().setTitle(R.string.title_devices);
             getActionBar().show();
         }
+
+        setContentView(R.layout.activity_bluetooth);
 
 
         // Initializes a Bluetooth adapter.  For API level 18 and above, get a reference to
@@ -143,9 +145,10 @@ public class BluetoothActivity extends ListActivity{
 //        intent.putExtra(MainActivity.DEVICEKEY, device);
 //        startActivity(intent);
 
-        final Intent intent = new Intent(this, DeviceControlActivity.class);
-        intent.putExtra(DeviceControlActivity.EXTRAS_DEVICE_NAME, device.getName());
-        intent.putExtra(DeviceControlActivity.EXTRAS_DEVICE_ADDRESS, device.getAddress());
+//        final Intent intent = new Intent(this, DeviceControlActivity.class);
+        final Intent intent = new Intent(this, MainActivity.class);
+        intent.putExtra(MainActivity.EXTRAS_DEVICE_NAME, device.getName());
+        intent.putExtra(MainActivity.EXTRAS_DEVICE_ADDRESS, device.getAddress());
         if (mScanning) {
             mBluetoothAdapter.stopLeScan(mLeScanCallback);
             mScanning = false;

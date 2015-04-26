@@ -1,49 +1,43 @@
 package com.michaelchen.chairtalk;
 
-import android.bluetooth.BluetoothDevice;
-import android.bluetooth.BluetoothSocket;
-import android.content.BroadcastReceiver;
+import android.bluetooth.BluetoothAdapter;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.os.AsyncTask;
+import android.os.IBinder;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.CompoundButton;
 import android.widget.SeekBar;
-import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.message.BasicHeader;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
-import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.UUID;
 
 
 public class MainActivity extends ActionBarActivity {
@@ -54,17 +48,16 @@ public class MainActivity extends ActionBarActivity {
     private SeekBar seekBackHeat;
     protected Map<String, String> uuidToKey;
     protected Map<String, String> keyToUuid;
-    static final String DEVICEKEY = "device_key_intent";
-//    private static final String uri = "http://shell.storm.pm:38027";
-//    private static final String uri = "http://54.215.11.207:38027";
     private static final String uri = "http://54.215.11.207:38001";
-//    private static final String uri = "http://shell.storm.pm:38001";
-//    private static final String uri = "http://192.31.105.139:38001";
-    public static final int refreshPeriod = 5000;
-    public static final int smapDelay = 12000;
+    public static final int refreshPeriod = 10000;
+    public static final int smapDelay = 20000;
     private Timer timer = null;
     private TimerTask timerTask;
-    private BluetoothDevice bluetoothDevice;
+    private BluetoothManager bluetoothManager = null;
+    private Date lastUpdate; //TODO: fix hack to prevent smap loop
+
+    public static final String EXTRAS_DEVICE_NAME = "DEVICE_NAME";
+    public static final String EXTRAS_DEVICE_ADDRESS = "DEVICE_ADDRESS";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -72,12 +65,18 @@ public class MainActivity extends ActionBarActivity {
         setContentView(R.layout.activity_main);
         initSeekbarListeners();
         setSeekbarPositions();
-//        initSwitch();
         initMaps();
         updateLastUpdate();
-        Intent i = getIntent();
-        if (i.hasExtra(DEVICEKEY)) {
-            bluetoothDevice = i.getParcelableExtra(DEVICEKEY);
+        initBle();
+        lastUpdate = new Date();
+    }
+
+    private void initBle() {
+        final Intent intent = getIntent();
+        if (intent.hasExtra(EXTRAS_DEVICE_NAME) && intent.hasExtra(EXTRAS_DEVICE_ADDRESS)) {
+            String mDeviceName = intent.getStringExtra(EXTRAS_DEVICE_NAME);
+            String mDeviceAddress = intent.getStringExtra(EXTRAS_DEVICE_ADDRESS);
+            bluetoothManager = new BluetoothManager(this, mDeviceAddress);
         }
     }
 
@@ -95,6 +94,8 @@ public class MainActivity extends ActionBarActivity {
 
     }
 
+
+
     @Override
     protected void onResume() {
         super.onResume();
@@ -106,12 +107,20 @@ public class MainActivity extends ActionBarActivity {
 //            sharedPref.edit().putBoolean("first_launch", false).commit();
         }
         rescheduleTimer(0);
+        if (bluetoothManager != null) bluetoothManager.onResume();
     }
 
     @Override
     protected void onPause() {
         super.onPause();
         timer.cancel();
+        if (bluetoothManager != null) bluetoothManager.onPause();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (bluetoothManager != null) bluetoothManager.onDestroy();
     }
 
     protected void initSeekbarListeners() {
@@ -129,7 +138,7 @@ public class MainActivity extends ActionBarActivity {
 
             public void onStopTrackingTouch(SeekBar seekBar) {
                 MainActivity.this.updatePref(getString(R.string.seek_back_fan), currentPosition);
-                smapButton(null);
+                sendUpdate();
             }
         });
 
@@ -147,7 +156,7 @@ public class MainActivity extends ActionBarActivity {
 
             public void onStopTrackingTouch(SeekBar seekBar) {
                 MainActivity.this.updatePref(getString(R.string.seek_bottom_fan), currentPosition);
-                smapButton(null);
+                sendUpdate();
             }
         });
 
@@ -165,7 +174,7 @@ public class MainActivity extends ActionBarActivity {
 
             public void onStopTrackingTouch(SeekBar seekBar) {
                 MainActivity.this.updatePref(getString(R.string.seek_back_heat), currentPosition);
-                smapButton(null);
+                sendUpdate();
             }
         });
 
@@ -183,7 +192,7 @@ public class MainActivity extends ActionBarActivity {
 
             public void onStopTrackingTouch(SeekBar seekBar) {
                 MainActivity.this.updatePref(getString(R.string.seek_bottom_heat), currentPosition);
-                smapButton(null);
+                sendUpdate();
             }
         });
     }
@@ -261,7 +270,6 @@ public class MainActivity extends ActionBarActivity {
         int backHeatPos = sharedPref.getInt(getString(R.string.seek_back_heat), 0);
         int bottomHeatPos = sharedPref.getInt(getString(R.string.seek_bottom_heat), 0);
         boolean inChair = sharedPref.getBoolean(getString(R.string.in_chair_key), false);
-//        JSONObject jsonobj = createJsonObject(backFanPos, bottomFanPos, backHeatPos, bottomHeatPos, inChair);
         JSONObject jsonobj = createJsonObject(backFanPos, bottomFanPos, backHeatPos, bottomHeatPos, inChair);
         HttpAsyncTask task = new HttpAsyncTask(jsonobj);
         task.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, uri);
@@ -277,7 +285,6 @@ public class MainActivity extends ActionBarActivity {
     }
 
     private void rescheduleTimer(int delay) {
-//        TODO: Fix timer rescheduling
         if (timer != null) {
             timer.cancel();
         }
@@ -297,9 +304,55 @@ public class MainActivity extends ActionBarActivity {
         timer.scheduleAtFixedRate(timerTask, delay, refreshPeriod);
     }
 
-    public void smapButton(View view) {
-        sendUpdateSmap();
+    public void sendUpdate() {
         rescheduleTimer();
+        sendUpdateBle();
+        sendUpdateSmap();
+        lastUpdate = new Date();
+    }
+
+    private boolean validUpdateTime() {
+        Date currentTime = new Date();
+        long seconds = (currentTime.getTime()-lastUpdate.getTime());
+        return seconds > smapDelay;
+    }
+
+    void setBleStatus(byte[] status) {
+        if (status.length < 5 || !validUpdateTime()) {
+            return;
+        }
+
+        SharedPreferences sharedPref = MainActivity.this.getSharedPreferences(
+                getString(R.string.temp_preference_file_key), Context.MODE_PRIVATE);
+
+        SharedPreferences.Editor e = sharedPref.edit();
+        e.putInt(getString(R.string.seek_back_heat), status[0]);
+        e.putInt(getString(R.string.seek_bottom_heat), status[1]);
+        e.putInt(getString(R.string.seek_back_fan), status[2]);
+        e.putInt(getString(R.string.seek_bottom_fan), status[3]);
+        e.putBoolean(getString(R.string.in_chair_key), (boolean) (status[4] != 0));
+        e.apply();
+        e.commit();
+        rescheduleTimer();
+        sendUpdateSmap();
+
+    }
+
+    private byte[] getByteStatus() {
+        SharedPreferences sharedPref = MainActivity.this.getSharedPreferences(
+                getString(R.string.temp_preference_file_key), Context.MODE_PRIVATE);
+        int backFanPos = sharedPref.getInt(getString(R.string.seek_back_fan), 0);
+        int bottomFanPos = sharedPref.getInt(getString(R.string.seek_bottom_fan), 0);
+        int backHeatPos = sharedPref.getInt(getString(R.string.seek_back_heat), 0);
+        int bottomHeatPos = sharedPref.getInt(getString(R.string.seek_bottom_heat), 0);
+        byte[] ret = {(byte) backHeatPos, (byte) bottomHeatPos, (byte) backFanPos, (byte) bottomFanPos};
+        return ret;
+    }
+
+    private void sendUpdateBle() {
+        if (bluetoothManager != null) {
+            bluetoothManager.writeData(getByteStatus());
+        }
     }
 
     private JSONObject createJsonObject(int backFan, int bottomFan, int backHeat, int bottomHeat, boolean inChair) {
@@ -311,7 +364,7 @@ public class MainActivity extends ActionBarActivity {
             header.put("language", Locale.getDefault().getISO3Language()); // Language
             jsonobj.put("header", header);
 
-//            jsonobj.put("occupancy", inChair);
+            jsonobj.put("occupancy", inChair);
             jsonobj.put("backf", backFan);
             jsonobj.put("bottomf", bottomFan);
             jsonobj.put("backh", backHeat);
@@ -339,7 +392,6 @@ public class MainActivity extends ActionBarActivity {
                 httpPostReq.setEntity(se);
                 httpPostReq.setHeader("Accept", "application/json");
                 httpPostReq.setHeader("Content-type", "application/json");
-                Log.d("httpPost", "starting execution");
                 HttpResponse httpResponse = httpclient.execute(httpPostReq);
                 InputStream inputStream = httpResponse.getEntity().getContent();
                 final String response = inputStreamToString(inputStream);
@@ -362,7 +414,7 @@ public class MainActivity extends ActionBarActivity {
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        Toast.makeText(getBaseContext(), "Please Check Connection", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getBaseContext(), "Please Check Connection", Toast.LENGTH_SHORT).show();
                     }
                 });
                 return false;
@@ -399,37 +451,36 @@ public class MainActivity extends ActionBarActivity {
                 Thread t = new Thread(new Runnable() {
                     @Override
                     public void run() {
-                        try {
-                            DefaultHttpClient httpclient = new DefaultHttpClient();
-                            HttpPost httpPostReq = new HttpPost(uri);
-                            StringEntity se = new StringEntity(String.format(QUERY_LINE, uuid));
+                    try {
+                        DefaultHttpClient httpclient = new DefaultHttpClient();
+                        HttpPost httpPostReq = new HttpPost(uri);
+                        StringEntity se = new StringEntity(String.format(QUERY_LINE, uuid));
 
-                            httpPostReq.setEntity(se);
-                            HttpResponse httpResponse = httpclient.execute(httpPostReq);
-                            InputStream inputStream = httpResponse.getEntity().getContent();
-                            final String response = inputStreamToString(inputStream);
-                            Log.d("httpPost", response);
-                            JSONObject jsonResponse = new JSONObject(response.substring(1, response.length() - 1));
-                            JSONArray readings = ((JSONArray) jsonResponse.getJSONArray("Readings")).getJSONArray(0);
-                            String retUuid = jsonResponse.getString("uuid");
-                            int value = readings.getInt(1);
-                            MainActivity.this.updatePref(MainActivity.this.uuidToKey.get(retUuid), value);
-                            runOnUiThread(new Runnable() {
-                                @Override
-                                public void run() {
-//                            Toast.makeText(getBaseContext(), "Post Result: " + response, Toast.LENGTH_SHORT).show();
-                                    MainActivity.this.setSeekbarPositions();
-                                }
-                            });
-                        } catch (Exception e) {
-                            Log.d("httpPost", "failed");
-                            runOnUiThread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    Toast.makeText(getBaseContext(), "Please Check Connection", Toast.LENGTH_SHORT).show();
-                                }
-                            });
-                        }
+                        httpPostReq.setEntity(se);
+                        HttpResponse httpResponse = httpclient.execute(httpPostReq);
+                        InputStream inputStream = httpResponse.getEntity().getContent();
+                        final String response = inputStreamToString(inputStream);
+                        Log.d("httpPost", response);
+                        JSONObject jsonResponse = new JSONObject(response.substring(1, response.length() - 1));
+                        JSONArray readings = ((JSONArray) jsonResponse.getJSONArray("Readings")).getJSONArray(0);
+                        String retUuid = jsonResponse.getString("uuid");
+                        int value = readings.getInt(1);
+                        MainActivity.this.updatePref(MainActivity.this.uuidToKey.get(retUuid), value);
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                            MainActivity.this.setSeekbarPositions();
+                            }
+                        });
+                    } catch (Exception e) {
+                        Log.d("httpPost", "failed");
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                Toast.makeText(getBaseContext(), "Please Check Connection", Toast.LENGTH_SHORT).show();
+                            }
+                        });
+                    }
                     }
                 });
                 t.run();
@@ -447,19 +498,6 @@ public class MainActivity extends ActionBarActivity {
         }
     }
 
-    public void readBT(View v) {
-        if (bluetoothDevice == null) return;
-        try {
-            BluetoothSocket socket = bluetoothDevice.createRfcommSocketToServiceRecord(UUID.fromString("00001101-0000-1000-8000-00805F9B34FB"));
-            socket.connect();
-            InputStream i = socket.getInputStream();
-            String result = inputStreamToString(i);
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
     private void querySmap(String uuid) {
         new SmapQueryAsyncTask(uuid).execute("http://shell.storm.pm:8079/api/query");
     }
@@ -469,6 +507,13 @@ public class MainActivity extends ActionBarActivity {
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_main, menu);
+        if (bluetoothManager == null) {
+            menu.findItem(R.id.action_disconnect).setVisible(false);
+            menu.findItem(R.id.action_bluetooth).setVisible(true);
+        } else {
+            menu.findItem(R.id.action_disconnect).setVisible(true);
+            menu.findItem(R.id.action_bluetooth).setVisible(false);
+        }
         return true;
     }
 
@@ -486,6 +531,14 @@ public class MainActivity extends ActionBarActivity {
                 return true;
             case R.id.action_bluetooth:
                 startActivity(new Intent(this, BluetoothActivity.class));
+                return true;
+            case R.id.action_disconnect:
+                if (bluetoothManager != null) {
+                    bluetoothManager.disconnect();
+                    bluetoothManager = null;
+                }
+                invalidateOptionsMenu();
+                return true;
         }
 
         return super.onOptionsItemSelected(item);

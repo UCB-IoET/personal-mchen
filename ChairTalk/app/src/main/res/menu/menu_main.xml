@@ -4,7 +4,11 @@
     <item android:id="@+id/action_settings" android:title="@string/action_settings"
         android:orderInCategory="100" app:showAsAction="never" />
     <item android:id="@+id/action_bluetooth" android:title="@string/action_bluetooth"
-        android:orderInCategory="100" app:showAsAction="never" />
+        android:orderInCategory="100" app:showAsAction="never"/>
     <item android:id="@+id/action_disconnect" android:title="@string/action_disconnect"
-        android:orderInCategory="100" app:showAsAction="never" />
+        android:orderInCategory="100" app:showAsAction="never"/>
+    <item android:id="@+id/action_voice" android:title="@string/voice"
+        android:orderInCategory="100" app:showAsAction="ifRoom"
+        android:onClick="onVoiceClick"
+        android:icon="@drawable/mic"/>
 </menu>

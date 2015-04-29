@@ -1,13 +1,12 @@
 package com.michaelchen.chairtalk;
 
-import android.bluetooth.BluetoothAdapter;
-import android.content.ComponentName;
+import android.app.AlarmManager;
+import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
-import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.os.AsyncTask;
-import android.os.IBinder;
+import android.speech.RecognizerIntent;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -32,16 +31,20 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.TimeZone;
 import java.util.Timer;
 import java.util.TimerTask;
 
 
 public class MainActivity extends ActionBarActivity {
 
+    public static final String TAG = "MainActivity";
     private SeekBar seekBottomFan;
     private SeekBar seekBackFan;
     private SeekBar seekBottomHeat;
@@ -49,15 +52,18 @@ public class MainActivity extends ActionBarActivity {
     protected Map<String, String> uuidToKey;
     protected Map<String, String> keyToUuid;
     private static final String uri = "http://54.215.11.207:38001";
+    private static final String QUERY_STRING = "http://shell.storm.pm:8079/api/query";
     public static final int refreshPeriod = 10000;
     public static final int smapDelay = 20000;
     private Timer timer = null;
-    private TimerTask timerTask;
     private BluetoothManager bluetoothManager = null;
     private Date lastUpdate; //TODO: fix hack to prevent smap loop
 
     public static final String EXTRAS_DEVICE_NAME = "DEVICE_NAME";
     public static final String EXTRAS_DEVICE_ADDRESS = "DEVICE_ADDRESS";
+    protected static final int REQUEST_OK = 1;
+
+    public static final long smapUpdateTime = AlarmManager.INTERVAL_HALF_HOUR;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -69,32 +75,31 @@ public class MainActivity extends ActionBarActivity {
         updateLastUpdate();
         initBle();
         lastUpdate = new Date();
+        setRecurringAlarm(smapUpdateTime);
     }
 
     private void initBle() {
         final Intent intent = getIntent();
         if (intent.hasExtra(EXTRAS_DEVICE_NAME) && intent.hasExtra(EXTRAS_DEVICE_ADDRESS)) {
-            String mDeviceName = intent.getStringExtra(EXTRAS_DEVICE_NAME);
+//            String mDeviceName = intent.getStringExtra(EXTRAS_DEVICE_NAME);
             String mDeviceAddress = intent.getStringExtra(EXTRAS_DEVICE_ADDRESS);
             bluetoothManager = new BluetoothManager(this, mDeviceAddress);
         }
     }
 
     private void initMaps() {
-        uuidToKey = new HashMap<String, String>();
+        uuidToKey = new HashMap<>();
         uuidToKey.put("27e1e889-b749-5cf9-8f90-5cc5f1750ddf", getString(R.string.seek_back_fan));
         uuidToKey.put("33ecc20c-e636-58eb-863f-142717105075", getString(R.string.seek_back_heat));
         uuidToKey.put("a99daf41-f3b3-51a7-97bf-48fb3e7bf130", getString(R.string.seek_bottom_heat));
         uuidToKey.put("b7ef2e98-2e0a-515b-b534-69894fdddf6f", getString(R.string.seek_bottom_fan));
 
-        keyToUuid = new HashMap<String, String>();
+        keyToUuid = new HashMap<>();
         for(Map.Entry<String, String> entry : uuidToKey.entrySet()){
             keyToUuid.put(entry.getValue(), entry.getKey());
         }
 
     }
-
-
 
     @Override
     protected void onResume() {
@@ -133,7 +138,7 @@ public class MainActivity extends ActionBarActivity {
             }
 
             public void onStartTrackingTouch(SeekBar seekBar) {
-                // TODO Auto-generated method stub
+
             }
 
             public void onStopTrackingTouch(SeekBar seekBar) {
@@ -151,7 +156,7 @@ public class MainActivity extends ActionBarActivity {
             }
 
             public void onStartTrackingTouch(SeekBar seekBar) {
-                // TODO Auto-generated method stub
+
             }
 
             public void onStopTrackingTouch(SeekBar seekBar) {
@@ -169,7 +174,7 @@ public class MainActivity extends ActionBarActivity {
             }
 
             public void onStartTrackingTouch(SeekBar seekBar) {
-                // TODO Auto-generated method stub
+
             }
 
             public void onStopTrackingTouch(SeekBar seekBar) {
@@ -187,7 +192,7 @@ public class MainActivity extends ActionBarActivity {
             }
 
             public void onStartTrackingTouch(SeekBar seekBar) {
-                // TODO Auto-generated method stub
+
             }
 
             public void onStopTrackingTouch(SeekBar seekBar) {
@@ -252,16 +257,6 @@ public class MainActivity extends ActionBarActivity {
         return e.commit();
     }
 
-    protected boolean updatePref(String key, boolean value) {
-        // update heating or cooling
-        SharedPreferences sharedPref = MainActivity.this.getSharedPreferences(
-                getString(R.string.temp_preference_file_key), Context.MODE_PRIVATE);
-        SharedPreferences.Editor e = sharedPref.edit();
-        e.putBoolean(key, value);
-        e.apply();
-        return e.commit();
-    }
-
     protected void sendUpdateSmap() {
         SharedPreferences sharedPref = MainActivity.this.getSharedPreferences(
                 getString(R.string.temp_preference_file_key), Context.MODE_PRIVATE);
@@ -270,7 +265,9 @@ public class MainActivity extends ActionBarActivity {
         int backHeatPos = sharedPref.getInt(getString(R.string.seek_back_heat), 0);
         int bottomHeatPos = sharedPref.getInt(getString(R.string.seek_bottom_heat), 0);
         boolean inChair = sharedPref.getBoolean(getString(R.string.in_chair_key), false);
-        JSONObject jsonobj = createJsonObject(backFanPos, bottomFanPos, backHeatPos, bottomHeatPos, inChair);
+        int temp = sharedPref.getInt(getString(R.string.temp_key), 0);
+        int humidity = sharedPref.getInt(getString(R.string.humidity_key), 0);
+        JSONObject jsonobj = createJsonObject(backFanPos, bottomFanPos, backHeatPos, bottomHeatPos, inChair, temp, humidity);
         HttpAsyncTask task = new HttpAsyncTask(jsonobj);
         task.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, uri);
     }
@@ -289,7 +286,7 @@ public class MainActivity extends ActionBarActivity {
             timer.cancel();
         }
         timer = new Timer();
-        timerTask = new TimerTask() {
+        TimerTask timerTask = new TimerTask() {
             @Override
             public void run() {
                 MainActivity.this.querySmapView(null);
@@ -318,7 +315,7 @@ public class MainActivity extends ActionBarActivity {
     }
 
     void setBleStatus(byte[] status) {
-        if (status.length < 5 || !validUpdateTime()) {
+        if (status.length < 9 || !validUpdateTime()) {
             return;
         }
 
@@ -330,12 +327,25 @@ public class MainActivity extends ActionBarActivity {
         e.putInt(getString(R.string.seek_bottom_heat), status[1]);
         e.putInt(getString(R.string.seek_back_fan), status[2]);
         e.putInt(getString(R.string.seek_bottom_fan), status[3]);
-        e.putBoolean(getString(R.string.in_chair_key), (boolean) (status[4] != 0));
+        e.putBoolean(getString(R.string.in_chair_key), (status[4] != 0));
+        int temp = ((unsignedByteToInt(status[5])) << 8) + unsignedByteToInt(status[6]);
+        int humidity = ((unsignedByteToInt(status[7])) << 8) + unsignedByteToInt(status[8]);
+        e.putInt(getString(R.string.temp_key), temp);
+        e.putInt(getString(R.string.humidity_key), humidity);
         e.apply();
         e.commit();
         rescheduleTimer();
         sendUpdateSmap();
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                MainActivity.this.setSeekbarPositions();
+            }
+        });
+    }
 
+    public static int unsignedByteToInt(byte b) {
+        return b & 0xff;
     }
 
     private byte[] getByteStatus() {
@@ -355,7 +365,13 @@ public class MainActivity extends ActionBarActivity {
         }
     }
 
-    private JSONObject createJsonObject(int backFan, int bottomFan, int backHeat, int bottomHeat, boolean inChair) {
+    void disconnectBluetoothManager() {
+        bluetoothManager = null;
+        recreate();
+    }
+
+    private JSONObject createJsonObject(int backFan, int bottomFan, int backHeat, int bottomHeat, boolean inChair,
+                                        int temp, int humidity) {
         JSONObject jsonobj = new JSONObject();
         JSONObject header = new JSONObject();
         try {
@@ -369,6 +385,8 @@ public class MainActivity extends ActionBarActivity {
             jsonobj.put("bottomf", bottomFan);
             jsonobj.put("backh", backHeat);
             jsonobj.put("bottomh", bottomHeat);
+            jsonobj.put("temperature", temp);
+            jsonobj.put("humidity", humidity);
             jsonobj.put("macaddr", "12345");
         } catch (JSONException e) {
 
@@ -425,7 +443,7 @@ public class MainActivity extends ActionBarActivity {
         }
     }
 
-    private static String inputStreamToString(InputStream inputStream) throws IOException {
+    static String inputStreamToString(InputStream inputStream) throws IOException {
         BufferedReader bufferedReader = new BufferedReader( new InputStreamReader(inputStream));
         String line = "";
         String result = "";
@@ -465,6 +483,7 @@ public class MainActivity extends ActionBarActivity {
                         JSONArray readings = ((JSONArray) jsonResponse.getJSONArray("Readings")).getJSONArray(0);
                         String retUuid = jsonResponse.getString("uuid");
                         int value = readings.getInt(1);
+                        long time = readings.getLong(0);
                         MainActivity.this.updatePref(MainActivity.this.uuidToKey.get(retUuid), value);
                         runOnUiThread(new Runnable() {
                             @Override
@@ -488,18 +507,40 @@ public class MainActivity extends ActionBarActivity {
             return true;
         }
         // onPostExecute displays the results of the AsyncTask.
-        protected void onPostExecute(String result) {
+        protected void onPostExecute(Boolean result) {
+            MainActivity.this.signalTaskComplete();
         }
     }
 
     public void querySmapView(View v) {
+        querySmap();
+    }
+
+    private int numTasksComplete;
+
+    private void querySmap() {
+        numTasksComplete = 0;
         for(String uuid : uuidToKey.keySet()) {
-            querySmap(uuid);
+            SmapQueryAsyncTask task =  new SmapQueryAsyncTask(uuid);
+            task.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, QUERY_STRING);
         }
     }
 
-    private void querySmap(String uuid) {
-        new SmapQueryAsyncTask(uuid).execute("http://shell.storm.pm:8079/api/query");
+    private void signalTaskComplete() {
+        numTasksComplete++;
+        if (numTasksComplete == uuidToKey.size()) {
+            sendUpdateBle();
+        }
+    }
+
+    private void setRecurringAlarm(long period) {
+        Intent intent = new Intent(getApplicationContext(), StartServiceReceiver.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+
+        PendingIntent pendingIntent = PendingIntent.getBroadcast(this, 0, intent, PendingIntent.FLAG_CANCEL_CURRENT);
+        AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+        alarmManager.setInexactRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(), period, pendingIntent);
+        Log.d(TAG, "Start repeating alarm");
     }
 
 
@@ -542,5 +583,66 @@ public class MainActivity extends ActionBarActivity {
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    public void onVoiceClick(MenuItem item) {
+        Intent i = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+        i.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, "en-US");
+        try {
+            startActivityForResult(i, REQUEST_OK);
+        } catch (Exception e) {
+            Toast.makeText(this, "Error initializing speech to text engine.", Toast.LENGTH_LONG).show();
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode==REQUEST_OK  && resultCode==RESULT_OK) {
+            ArrayList<String> voiceData = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
+            if (voiceData.size() > 0) {
+                TextView t = (TextView) findViewById(R.id.textViewVoice);
+                t.setText(voiceData.get(0));
+                String text = voiceData.get(0).toLowerCase();
+                if (text.contains("fan") || text.contains("hot")) {
+                    coolDown();
+                } else if (text.contains("heat") || text.contains("cold")) {
+                    heatUp();
+                }
+
+            }
+
+        }
+    }
+
+    private static final int MAX_SEEKBAR_POS = 100;
+    private static final int MIN_SEEKBAR_POS = 0;
+
+    private void coolDown() {
+        MainActivity.this.updatePref(getString(R.string.seek_back_fan), MAX_SEEKBAR_POS);
+        MainActivity.this.updatePref(getString(R.string.seek_bottom_fan), MAX_SEEKBAR_POS);
+        MainActivity.this.updatePref(getString(R.string.seek_back_heat), MIN_SEEKBAR_POS);
+        MainActivity.this.updatePref(getString(R.string.seek_bottom_heat), MIN_SEEKBAR_POS);
+        sendUpdate();
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                MainActivity.this.setSeekbarPositions();
+            }
+        });
+    }
+
+    private void heatUp() {
+        MainActivity.this.updatePref(getString(R.string.seek_back_fan), MIN_SEEKBAR_POS);
+        MainActivity.this.updatePref(getString(R.string.seek_bottom_fan), MIN_SEEKBAR_POS);
+        MainActivity.this.updatePref(getString(R.string.seek_back_heat), MAX_SEEKBAR_POS);
+        MainActivity.this.updatePref(getString(R.string.seek_bottom_heat), MAX_SEEKBAR_POS);
+        sendUpdate();
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                MainActivity.this.setSeekbarPositions();
+            }
+        });
     }
 }

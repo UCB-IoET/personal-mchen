@@ -113,5 +113,11 @@
             android:layout_height="wrap_content"
             android:text="Json Text"
             android:id="@+id/textViewJson"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Voice"
+            android:id="@+id/textViewVoice" />
     </LinearLayout>
 </RelativeLayout>

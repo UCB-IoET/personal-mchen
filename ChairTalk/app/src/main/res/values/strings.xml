@@ -32,4 +32,8 @@
     <string name="unknown_characteristic"></string>
 
     <string name="select_chair">Select Chair</string>
+    <string name="voice">Voice</string>
+
+    <string name="temp_key">temp_key</string>
+    <string name="humidity_key">humidity_key</string>
 </resources>

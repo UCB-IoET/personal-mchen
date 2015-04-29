@@ -49,6 +49,15 @@
             android:name=".DeviceControlActivity"
             android:label="@string/title_activity_device_control" >
         </activity>
+
+        <receiver android:name=".StartServiceReceiver" >
+        </receiver>
+
+        <service
+            android:name=".UpdateService"
+            android:enabled="true"
+            android:exported="true" >
+        </service>
     </application>
 
 </manifest>

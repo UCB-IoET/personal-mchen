@@ -73,7 +73,7 @@ public class BluetoothActivity extends ListActivity{
     }
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.menu_main, menu);
+        getMenuInflater().inflate(R.menu.menu_bluetooth, menu);
 //        if (!mScanning) {
 //            menu.findItem(R.id.menu_stop).setVisible(false);
 //            menu.findItem(R.id.menu_scan).setVisible(true);

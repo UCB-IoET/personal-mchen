@@ -19,7 +19,8 @@ public class UpdateService extends IntentService {
     @Override
     protected void onHandleIntent(Intent intent) {
         Context c = getApplicationContext();
-        UpdateTask task = new UpdateTask(c);
+//        UpdateTask task = new UpdateTask(c);
+        QueryTask task = new UpdateTask(c);
         task.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
     }
 }

@@ -18,6 +18,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
@@ -33,6 +34,7 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Locale;
@@ -49,10 +51,9 @@ public class MainActivity extends ActionBarActivity {
     private SeekBar seekBackFan;
     private SeekBar seekBottomHeat;
     private SeekBar seekBackHeat;
-    protected Map<String, String> uuidToKey;
-    protected Map<String, String> keyToUuid;
     private static final String uri = "http://54.215.11.207:38001";
     private static final String QUERY_STRING = "http://shell.storm.pm:8079/api/query";
+    public static final String macAddr = "12345";
     public static final int refreshPeriod = 10000;
     public static final int smapDelay = 20000;
     private Timer timer = null;
@@ -65,13 +66,43 @@ public class MainActivity extends ActionBarActivity {
 
     public static final long smapUpdateTime = AlarmManager.INTERVAL_HALF_HOUR;
 
+    static final String BACK_FAN = "Back Fan";
+    static final String BOTTOM_FAN = "Bottom Fan";
+    static final String BACK_HEAT = "Back Heat";
+    static final String BOTTOM_HEAT = "Bottom Heat";
+    static final String LAST_TIME = "Last Time";
+
+    static final Map<String, String> uuidToKey;
+    static final Map<String, String> keyToUuid;
+    static final Map<String, String> jsonToKey;
+
+    static {
+        Map<String, String> temp = new HashMap<>();
+        temp.put("27e1e889-b749-5cf9-8f90-5cc5f1750ddf", BACK_FAN);
+        temp.put("33ecc20c-e636-58eb-863f-142717105075", BACK_HEAT);
+        temp.put("a99daf41-f3b3-51a7-97bf-48fb3e7bf130", BOTTOM_HEAT);
+        temp.put("b7ef2e98-2e0a-515b-b534-69894fdddf6f", BOTTOM_FAN);
+        uuidToKey = Collections.unmodifiableMap(temp);
+        temp = new HashMap<>();
+        for(Map.Entry<String, String> entry : uuidToKey.entrySet()){
+            temp.put(entry.getValue(), entry.getKey());
+        }
+        keyToUuid = Collections.unmodifiableMap(temp);
+        temp = new HashMap<>();
+        temp.put("backf", BACK_FAN);
+        temp.put("bottomf", BOTTOM_FAN);
+        temp.put("backh", BACK_HEAT);
+        temp.put("bottomh", BOTTOM_HEAT);
+        temp.put("time", LAST_TIME);
+        jsonToKey = Collections.unmodifiableMap(temp);
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         initSeekbarListeners();
         setSeekbarPositions();
-        initMaps();
         updateLastUpdate();
         initBle();
         lastUpdate = new Date();
@@ -85,20 +116,6 @@ public class MainActivity extends ActionBarActivity {
             String mDeviceAddress = intent.getStringExtra(EXTRAS_DEVICE_ADDRESS);
             bluetoothManager = new BluetoothManager(this, mDeviceAddress);
         }
-    }
-
-    private void initMaps() {
-        uuidToKey = new HashMap<>();
-        uuidToKey.put("27e1e889-b749-5cf9-8f90-5cc5f1750ddf", getString(R.string.seek_back_fan));
-        uuidToKey.put("33ecc20c-e636-58eb-863f-142717105075", getString(R.string.seek_back_heat));
-        uuidToKey.put("a99daf41-f3b3-51a7-97bf-48fb3e7bf130", getString(R.string.seek_bottom_heat));
-        uuidToKey.put("b7ef2e98-2e0a-515b-b534-69894fdddf6f", getString(R.string.seek_bottom_fan));
-
-        keyToUuid = new HashMap<>();
-        for(Map.Entry<String, String> entry : uuidToKey.entrySet()){
-            keyToUuid.put(entry.getValue(), entry.getKey());
-        }
-
     }
 
     @Override
@@ -142,7 +159,7 @@ public class MainActivity extends ActionBarActivity {
             }
 
             public void onStopTrackingTouch(SeekBar seekBar) {
-                MainActivity.this.updatePref(getString(R.string.seek_back_fan), currentPosition);
+                MainActivity.this.updatePref(BACK_FAN, currentPosition);
                 sendUpdate();
             }
         });
@@ -160,7 +177,7 @@ public class MainActivity extends ActionBarActivity {
             }
 
             public void onStopTrackingTouch(SeekBar seekBar) {
-                MainActivity.this.updatePref(getString(R.string.seek_bottom_fan), currentPosition);
+                MainActivity.this.updatePref(BOTTOM_FAN, currentPosition);
                 sendUpdate();
             }
         });
@@ -178,7 +195,7 @@ public class MainActivity extends ActionBarActivity {
             }
 
             public void onStopTrackingTouch(SeekBar seekBar) {
-                MainActivity.this.updatePref(getString(R.string.seek_back_heat), currentPosition);
+                MainActivity.this.updatePref(BACK_HEAT, currentPosition);
                 sendUpdate();
             }
         });
@@ -196,7 +213,7 @@ public class MainActivity extends ActionBarActivity {
             }
 
             public void onStopTrackingTouch(SeekBar seekBar) {
-                MainActivity.this.updatePref(getString(R.string.seek_bottom_heat), currentPosition);
+                MainActivity.this.updatePref(BOTTOM_HEAT, currentPosition);
                 sendUpdate();
             }
         });
@@ -206,14 +223,14 @@ public class MainActivity extends ActionBarActivity {
         SharedPreferences sharedPref = this.getSharedPreferences(
                 getString(R.string.temp_preference_file_key), Context.MODE_PRIVATE);
 
-        int backFanPos = sharedPref.getInt(getString(R.string.seek_back_fan), 0);
+        int backFanPos = sharedPref.getInt(BACK_FAN, 0);
         seekBackFan.setProgress(backFanPos);
-        int bottomFanPos = sharedPref.getInt(getString(R.string.seek_bottom_fan), 0);
+        int bottomFanPos = sharedPref.getInt(BOTTOM_FAN, 0);
         seekBottomFan.setProgress(bottomFanPos);
 
-        int backHeatPos = sharedPref.getInt(getString(R.string.seek_back_heat), 0);
+        int backHeatPos = sharedPref.getInt(BACK_HEAT, 0);
         seekBackHeat.setProgress(backHeatPos);
-        int bottomHeatPos = sharedPref.getInt(getString(R.string.seek_bottom_heat), 0);
+        int bottomHeatPos = sharedPref.getInt(BOTTOM_HEAT, 0);
         seekBottomHeat.setProgress(bottomHeatPos); 
     }
 
@@ -260,10 +277,10 @@ public class MainActivity extends ActionBarActivity {
     protected void sendUpdateSmap() {
         SharedPreferences sharedPref = MainActivity.this.getSharedPreferences(
                 getString(R.string.temp_preference_file_key), Context.MODE_PRIVATE);
-        int backFanPos = sharedPref.getInt(getString(R.string.seek_back_fan), 0);
-        int bottomFanPos = sharedPref.getInt(getString(R.string.seek_bottom_fan), 0);
-        int backHeatPos = sharedPref.getInt(getString(R.string.seek_back_heat), 0);
-        int bottomHeatPos = sharedPref.getInt(getString(R.string.seek_bottom_heat), 0);
+        int backFanPos = sharedPref.getInt(BACK_FAN, 0);
+        int bottomFanPos = sharedPref.getInt(BOTTOM_FAN, 0);
+        int backHeatPos = sharedPref.getInt(BACK_HEAT, 0);
+        int bottomHeatPos = sharedPref.getInt(BOTTOM_HEAT, 0);
         boolean inChair = sharedPref.getBoolean(getString(R.string.in_chair_key), false);
         int temp = sharedPref.getInt(getString(R.string.temp_key), 0);
         int humidity = sharedPref.getInt(getString(R.string.humidity_key), 0);
@@ -289,13 +306,7 @@ public class MainActivity extends ActionBarActivity {
         TimerTask timerTask = new TimerTask() {
             @Override
             public void run() {
-                MainActivity.this.querySmapView(null);
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        MainActivity.this.updateLastPullTime();
-                    }
-                });
+                MainActivity.this.querySmap();
             }
         };
         timer.scheduleAtFixedRate(timerTask, delay, refreshPeriod);
@@ -323,10 +334,10 @@ public class MainActivity extends ActionBarActivity {
                 getString(R.string.temp_preference_file_key), Context.MODE_PRIVATE);
 
         SharedPreferences.Editor e = sharedPref.edit();
-        e.putInt(getString(R.string.seek_back_heat), status[0]);
-        e.putInt(getString(R.string.seek_bottom_heat), status[1]);
-        e.putInt(getString(R.string.seek_back_fan), status[2]);
-        e.putInt(getString(R.string.seek_bottom_fan), status[3]);
+        e.putInt(BACK_HEAT, status[0]);
+        e.putInt(BOTTOM_HEAT, status[1]);
+        e.putInt(BACK_FAN, status[2]);
+        e.putInt(BOTTOM_FAN, status[3]);
         e.putBoolean(getString(R.string.in_chair_key), (status[4] != 0));
         int temp = ((unsignedByteToInt(status[5])) << 8) + unsignedByteToInt(status[6]);
         int humidity = ((unsignedByteToInt(status[7])) << 8) + unsignedByteToInt(status[8]);
@@ -351,10 +362,10 @@ public class MainActivity extends ActionBarActivity {
     private byte[] getByteStatus() {
         SharedPreferences sharedPref = MainActivity.this.getSharedPreferences(
                 getString(R.string.temp_preference_file_key), Context.MODE_PRIVATE);
-        int backFanPos = sharedPref.getInt(getString(R.string.seek_back_fan), 0);
-        int bottomFanPos = sharedPref.getInt(getString(R.string.seek_bottom_fan), 0);
-        int backHeatPos = sharedPref.getInt(getString(R.string.seek_back_heat), 0);
-        int bottomHeatPos = sharedPref.getInt(getString(R.string.seek_bottom_heat), 0);
+        int backFanPos = sharedPref.getInt(BACK_FAN, 0);
+        int bottomFanPos = sharedPref.getInt(BOTTOM_FAN, 0);
+        int backHeatPos = sharedPref.getInt(BACK_HEAT, 0);
+        int bottomHeatPos = sharedPref.getInt(BOTTOM_HEAT, 0);
         byte[] ret = {(byte) backHeatPos, (byte) bottomHeatPos, (byte) backFanPos, (byte) bottomFanPos};
         return ret;
     }
@@ -387,7 +398,7 @@ public class MainActivity extends ActionBarActivity {
             jsonobj.put("bottomh", bottomHeat);
             jsonobj.put("temperature", temp);
             jsonobj.put("humidity", humidity);
-            jsonobj.put("macaddr", "12345");
+            jsonobj.put("macaddr", macAddr);
         } catch (JSONException e) {
 
         }
@@ -512,18 +523,36 @@ public class MainActivity extends ActionBarActivity {
         }
     }
 
-    public void querySmapView(View v) {
-        querySmap();
+    private class ServerQueryTask extends UpdateTask {
+        public ServerQueryTask() {
+            super(MainActivity.this);
+        }
+
+        @Override
+        protected void onPostExecute(Boolean result) {
+            if (result) {
+                sendUpdateBle();
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        setSeekbarPositions();
+                        MainActivity.this.updateLastPullTime();
+                    }
+                });
+            }
+        }
     }
 
     private int numTasksComplete;
 
     private void querySmap() {
-        numTasksComplete = 0;
-        for(String uuid : uuidToKey.keySet()) {
-            SmapQueryAsyncTask task =  new SmapQueryAsyncTask(uuid);
-            task.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, QUERY_STRING);
-        }
+        QueryTask task = new ServerQueryTask();
+        task.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+//        numTasksComplete = 0;
+//        for(String uuid : uuidToKey.keySet()) {
+//            SmapQueryAsyncTask task =  new SmapQueryAsyncTask(uuid);
+//            task.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, QUERY_STRING);
+//        }
     }
 
     private void signalTaskComplete() {
@@ -585,6 +614,8 @@ public class MainActivity extends ActionBarActivity {
         return super.onOptionsItemSelected(item);
     }
 
+
+    //Extras for some voice commands
     public void onVoiceClick(MenuItem item) {
         Intent i = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
         i.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, "en-US");
@@ -619,10 +650,10 @@ public class MainActivity extends ActionBarActivity {
     private static final int MIN_SEEKBAR_POS = 0;
 
     private void coolDown() {
-        MainActivity.this.updatePref(getString(R.string.seek_back_fan), MAX_SEEKBAR_POS);
-        MainActivity.this.updatePref(getString(R.string.seek_bottom_fan), MAX_SEEKBAR_POS);
-        MainActivity.this.updatePref(getString(R.string.seek_back_heat), MIN_SEEKBAR_POS);
-        MainActivity.this.updatePref(getString(R.string.seek_bottom_heat), MIN_SEEKBAR_POS);
+        MainActivity.this.updatePref(BACK_FAN, MAX_SEEKBAR_POS);
+        MainActivity.this.updatePref(BOTTOM_FAN, MAX_SEEKBAR_POS);
+        MainActivity.this.updatePref(BACK_HEAT, MIN_SEEKBAR_POS);
+        MainActivity.this.updatePref(BOTTOM_HEAT, MIN_SEEKBAR_POS);
         sendUpdate();
         runOnUiThread(new Runnable() {
             @Override
@@ -633,10 +664,10 @@ public class MainActivity extends ActionBarActivity {
     }
 
     private void heatUp() {
-        MainActivity.this.updatePref(getString(R.string.seek_back_fan), MIN_SEEKBAR_POS);
-        MainActivity.this.updatePref(getString(R.string.seek_bottom_fan), MIN_SEEKBAR_POS);
-        MainActivity.this.updatePref(getString(R.string.seek_back_heat), MAX_SEEKBAR_POS);
-        MainActivity.this.updatePref(getString(R.string.seek_bottom_heat), MAX_SEEKBAR_POS);
+        MainActivity.this.updatePref(BACK_FAN, MIN_SEEKBAR_POS);
+        MainActivity.this.updatePref(BOTTOM_FAN, MIN_SEEKBAR_POS);
+        MainActivity.this.updatePref(BACK_HEAT, MAX_SEEKBAR_POS);
+        MainActivity.this.updatePref(BOTTOM_HEAT, MAX_SEEKBAR_POS);
         sendUpdate();
         runOnUiThread(new Runnable() {
             @Override

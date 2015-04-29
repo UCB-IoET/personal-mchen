@@ -56,6 +56,7 @@ class BluetoothManager {
                 mConnected = true;
             } else if (BluetoothLeService.ACTION_GATT_DISCONNECTED.equals(action)) {
                 mConnected = false;
+                activity.disconnectBluetoothManager();
             } else if (BluetoothLeService.ACTION_DATA_AVAILABLE.equals(action)) {
                 readData(intent.getByteArrayExtra(BluetoothLeService.EXTRA_DATA));
             } else if (BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED.equals(action)) {

@@ -63,6 +63,7 @@ public class MainActivity extends ActionBarActivity {
     public static final String EXTRAS_DEVICE_NAME = "DEVICE_NAME";
     public static final String EXTRAS_DEVICE_ADDRESS = "DEVICE_ADDRESS";
     protected static final int REQUEST_OK = 1;
+    protected static final int BLUETOOTH_REQUEST = 33;
 
     public static final long smapUpdateTime = AlarmManager.INTERVAL_HALF_HOUR;
 
@@ -115,6 +116,13 @@ public class MainActivity extends ActionBarActivity {
 //            String mDeviceName = intent.getStringExtra(EXTRAS_DEVICE_NAME);
             String mDeviceAddress = intent.getStringExtra(EXTRAS_DEVICE_ADDRESS);
             bluetoothManager = new BluetoothManager(this, mDeviceAddress);
+        } else {
+            SharedPreferences sharedPreferences = getSharedPreferences(getString(R.string.temp_preference_file_key), Context.MODE_PRIVATE);
+            String mac = sharedPreferences.getString(BluetoothManager.MAC_KEY, "");
+            if (!mac.equals("")) {
+                Intent i = new Intent(this, BluetoothActivity.class);
+                startActivity(i);
+            }
         }
     }
 
@@ -366,7 +374,7 @@ public class MainActivity extends ActionBarActivity {
         int bottomFanPos = sharedPref.getInt(BOTTOM_FAN, 0);
         int backHeatPos = sharedPref.getInt(BACK_HEAT, 0);
         int bottomHeatPos = sharedPref.getInt(BOTTOM_HEAT, 0);
-        byte[] ret = {(byte) backHeatPos, (byte) bottomHeatPos, (byte) backFanPos, (byte) bottomFanPos};
+        byte[] ret = {(byte) backHeatPos, (byte) bottomHeatPos, (byte) backFanPos, (byte) bottomFanPos, 1};
         return ret;
     }
 
@@ -642,7 +650,8 @@ public class MainActivity extends ActionBarActivity {
                 }
 
             }
-
+        } else if (requestCode == BLUETOOTH_REQUEST && resultCode != RESULT_OK) {
+            Toast.makeText(this, "No Bluetooth Connection", Toast.LENGTH_SHORT);
         }
     }
 

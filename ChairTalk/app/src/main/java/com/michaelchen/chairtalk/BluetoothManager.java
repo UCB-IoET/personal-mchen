@@ -14,6 +14,8 @@ import android.content.ServiceConnection;
 import android.os.IBinder;
 import android.util.Log;
 
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.List;
 
 /**
@@ -30,6 +32,7 @@ class BluetoothManager {
     public final String TAG = "BluetoothManager";
     public static final String SERV_UUID = "0000ffe0-0000-1000-8000-00805f9b34fb";
     public static final String CHAR_UUID = "0000ffe1-0000-1000-8000-00805f9b34fb";
+    public static final String MAC_KEY = "bluetooth_mac";
 
 
     private final ServiceConnection mServiceConnection = new ServiceConnection() {
@@ -121,7 +124,21 @@ class BluetoothManager {
     void readData(byte[] result) {
         // TODO: hand result to MainActivity
         Log.e(TAG, "read: " + result);
+        writeTime();
         activity.setBleStatus(result);
+    }
+
+    void writeTime() {
+        long currentTimeInMillis = System.currentTimeMillis();
+        int seconds = (int) (currentTimeInMillis/1000);
+        byte[] buf = ByteBuffer.allocate(4).order(ByteOrder.BIG_ENDIAN).putInt(seconds).array();
+        byte[] toWrite = new byte[5];
+        for (int i = 0; i < buf.length; i++) {
+            toWrite[i] = buf[i];
+        }
+        toWrite[4] = 0;
+        writeData(toWrite);
+
     }
 
     void writeData(byte[] data) {

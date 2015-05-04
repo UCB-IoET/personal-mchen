@@ -13,6 +13,7 @@ import android.bluetooth.BluetoothProfile;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Handler;
@@ -42,6 +43,7 @@ public class BluetoothActivity extends ListActivity{
     // Stops scanning after 10 seconds.
     private static final long SCAN_PERIOD = 10000;
     private BluetoothGatt mBluetoothGatt;
+    private String searchingMac;
 
 
     @Override
@@ -70,6 +72,8 @@ public class BluetoothActivity extends ListActivity{
             finish();
             return;
         }
+        SharedPreferences sharedPreferences = getSharedPreferences(getString(R.string.temp_preference_file_key), Context.MODE_PRIVATE);
+        searchingMac = sharedPreferences.getString(com.michaelchen.chairtalk.BluetoothManager.MAC_KEY, "");
     }
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -149,10 +153,6 @@ public class BluetoothActivity extends ListActivity{
         final Intent intent = new Intent(this, MainActivity.class);
         intent.putExtra(MainActivity.EXTRAS_DEVICE_NAME, device.getName());
         intent.putExtra(MainActivity.EXTRAS_DEVICE_ADDRESS, device.getAddress());
-        if (mScanning) {
-            mBluetoothAdapter.stopLeScan(mLeScanCallback);
-            mScanning = false;
-        }
         startActivity(intent);
 //        mBluetoothGatt = device.connectGatt(this, false, mGattCallback);
     }
@@ -186,6 +186,18 @@ public class BluetoothActivity extends ListActivity{
         }
         public void addDevice(BleAdvertisedData device) {
             if(!mLeDevices.contains(device)) {
+                String macAddr = device.getDevice().getAddress();
+                if (macAddr.equals(searchingMac)) {
+                    Log.d("BluetoothActivity", "found searching ble chair");
+                    if (mScanning) {
+                        mBluetoothAdapter.stopLeScan(mLeScanCallback);
+                        mScanning = false;
+                    }
+                    final Intent intent = new Intent(BluetoothActivity.this, MainActivity.class);
+                    intent.putExtra(MainActivity.EXTRAS_DEVICE_NAME, device.getName());
+                    intent.putExtra(MainActivity.EXTRAS_DEVICE_ADDRESS, macAddr);
+                    startActivity(intent);
+                }
                 mLeDevices.add(device);
             }
         }

@@ -14,6 +14,7 @@ import android.os.Handler;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
+import android.widget.Toast;
 
 
 /**
@@ -152,16 +153,25 @@ public class Tutorial extends Activity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        final String key = "chairid=";
         if (requestCode == 0) {
 
             if (data.hasExtra("SCAN_RESULT")) {
                 String contents = data.getStringExtra("SCAN_RESULT");
                 Log.d("Tutorial", contents);
-                SharedPreferences sharedPref = this.getSharedPreferences(
-                        getString(R.string.temp_preference_file_key), Context.MODE_PRIVATE);
-                sharedPref.edit().putBoolean("first_launch", false).commit();
-                Log.d("Tutorial", "nfc pairing");
-                finish();
+                int pos = contents.indexOf(key);
+                if (pos != -1) {
+                    String mac = contents.substring(pos + key.length());
+                    SharedPreferences sharedPref = this.getSharedPreferences(
+                            getString(R.string.temp_preference_file_key), Context.MODE_PRIVATE);
+                    sharedPref.edit().putBoolean("first_launch", false).commit();
+                    sharedPref.edit().putString(BluetoothManager.MAC_KEY, mac).commit();
+                    finish();
+                } else {
+                    Toast.makeText(getBaseContext(), "Please Scan Chair QR Code", Toast.LENGTH_SHORT);
+                    pairQR(null);
+                }
+
             }
             if(resultCode == RESULT_CANCELED){
                 //handle cancel

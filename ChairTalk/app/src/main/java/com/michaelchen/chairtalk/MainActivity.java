@@ -72,6 +72,7 @@ public class MainActivity extends ActionBarActivity {
     static final String BACK_HEAT = "Back Heat";
     static final String BOTTOM_HEAT = "Bottom Heat";
     static final String LAST_TIME = "Last Time";
+    static final String WF_KEY = "wifi_mac";
 
     static final Map<String, String> uuidToKey;
     static final Map<String, String> keyToUuid;
@@ -105,7 +106,6 @@ public class MainActivity extends ActionBarActivity {
         initSeekbarListeners();
         setSeekbarPositions();
         updateLastUpdate();
-        initBle();
         lastUpdate = new Date();
         setRecurringAlarm(smapUpdateTime);
     }
@@ -129,6 +129,9 @@ public class MainActivity extends ActionBarActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        if (bluetoothManager == null || !bluetoothManager.isConnected()) {
+            initBle();
+        }
         SharedPreferences sharedPref = this.getSharedPreferences(
                 getString(R.string.temp_preference_file_key), Context.MODE_PRIVATE);
         if (sharedPref.getBoolean("first_launch", true)) {
@@ -578,6 +581,15 @@ public class MainActivity extends ActionBarActivity {
         AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
         alarmManager.setInexactRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(), period, pendingIntent);
         Log.d(TAG, "Start repeating alarm");
+    }
+
+    void setBluetoothConnected(boolean connected) {
+        if (connected) {
+
+        } else {
+            bluetoothManager = null;
+            invalidateOptionsMenu();
+        }
     }
 
 

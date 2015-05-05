@@ -51,6 +51,10 @@ class BluetoothManager {
         }
     };
 
+    public boolean isConnected() {
+        return mConnected;
+    }
+
     private final BroadcastReceiver mGattUpdateReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -60,6 +64,7 @@ class BluetoothManager {
             } else if (BluetoothLeService.ACTION_GATT_DISCONNECTED.equals(action)) {
                 mConnected = false;
                 activity.disconnectBluetoothManager();
+                activity.setBluetoothConnected(false);
             } else if (BluetoothLeService.ACTION_DATA_AVAILABLE.equals(action)) {
                 readData(intent.getByteArrayExtra(BluetoothLeService.EXTRA_DATA));
             } else if (BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED.equals(action)) {

@@ -4,10 +4,18 @@ import com.michaelchen.chairtalk.util.SystemUiHider;
 
 import android.annotation.TargetApi;
 import android.app.Activity;
+import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
+import android.nfc.NdefMessage;
+import android.nfc.NdefRecord;
+import android.nfc.NfcAdapter;
+import android.nfc.Tag;
+import android.nfc.tech.MifareClassic;
+import android.nfc.tech.Ndef;
+import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -15,6 +23,10 @@ import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Toast;
+
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.util.Arrays;
 
 
 /**
@@ -46,6 +58,13 @@ public class Tutorial extends Activity {
      * The flags to pass to {@link SystemUiHider#getInstance}.
      */
     private static final int HIDER_FLAGS = SystemUiHider.FLAG_HIDE_NAVIGATION;
+
+    private NfcAdapter mNfcAdapter;
+    private PendingIntent mPendingIntent;
+
+    public static final String TAG = "Tutorial NFC QR";
+
+    private String supportedNfcTech = Ndef.class.getName();
 
     /**
      * The instance of the {@link SystemUiHider} for this activity.
@@ -115,10 +134,125 @@ public class Tutorial extends Activity {
             }
         });
 
+        mNfcAdapter = NfcAdapter.getDefaultAdapter(this);
+        mPendingIntent = PendingIntent.getActivity(this, 0, new Intent(this,
+                getClass()).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP), 0);
+
         // Upon interacting with UI controls, delay any scheduled hide()
         // operations to prevent the jarring behavior of controls going away
         // while interacting with the UI.
         findViewById(R.id.dummy_button).setOnTouchListener(mDelayHideTouchListener);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (mNfcAdapter != null) {
+            mNfcAdapter.enableForegroundDispatch(this, mPendingIntent, null, null);
+        }
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        parseIntent(intent);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if (mNfcAdapter != null) {
+            mNfcAdapter.disableForegroundDispatch(this);
+        }
+    }
+
+    private void parseIntent(Intent intent) {
+        if (intent.hasExtra(NfcAdapter.EXTRA_TAG)) {
+            Log.d(TAG, "Found NFC tag");
+            Tag tag = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
+            for(String tech : tag.getTechList()) {
+                if (tech.equals(supportedNfcTech)) {
+                    new NfcReaderTask().execute(tag);
+                }
+            }
+//            MifareClassic mifare =  MifareClassic.get(tagFromIntent);
+//            try {
+//                mifare.connect();
+//                int numBlocks = mifare.getBlockCount();
+//                for (int i = 0; i < numBlocks; i++) {
+//                    byte[] read = mifare.readBlock(i);
+//                }
+//            } catch (IOException e) {
+//                Log.e("NFC", "IOException while reading nfc", e);
+//            } finally {
+//                if (mifare != null) {
+//                    try {
+//                        mifare.close();
+//                    }
+//                    catch (IOException e) {
+//                        Log.e("NFC", "Error closing tag...", e);
+//                    }
+//                }
+//            }
+        }
+
+    }
+
+    private class NfcReaderTask extends AsyncTask<Tag, Void, String> {
+
+        @Override
+        protected String doInBackground(Tag... params) {
+            Tag tag = params[0];
+
+            Ndef ndef = Ndef.get(tag);
+            if (ndef == null) {
+                // NDEF is not supported by this Tag.
+                return null;
+            }
+
+            NdefMessage ndefMessage = ndef.getCachedNdefMessage();
+
+            NdefRecord[] records = ndefMessage.getRecords();
+            for (NdefRecord ndefRecord : records) {
+                if (ndefRecord.getTnf() == NdefRecord.TNF_WELL_KNOWN && Arrays.equals(ndefRecord.getType(), NdefRecord.RTD_URI)) {
+                    try {
+                        return readText(ndefRecord);
+                    } catch (UnsupportedEncodingException e) {
+                        Log.e(TAG, "Unsupported Encoding", e);
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        private String readText(NdefRecord record) throws UnsupportedEncodingException {
+
+            byte[] payload = record.getPayload();
+
+            // Get the Text Encoding
+            String textEncoding = ((payload[0] & 128) == 0) ? "UTF-8" : "UTF-16";
+
+            // Get the Language Code
+            int languageCodeLength = 0; //payload[0] & 0063;
+
+            // String languageCode = new String(payload, 1, languageCodeLength, "US-ASCII");
+            // e.g. "en"
+
+            // Get the Text
+            return new String(payload, languageCodeLength + 1, payload.length - languageCodeLength - 1, textEncoding);
+        }
+
+        @Override
+        protected void onPostExecute(String result) {
+            if (result != null) {
+                Log.d(TAG, "nfc read: " + result);
+                Toast.makeText(getBaseContext(), "Read content: " + result, Toast.LENGTH_SHORT).show();
+                if (storeResults(parseUrlString(result))) {
+                    finish();
+                }
+            }
+        }
     }
 
     @Override
@@ -150,25 +284,60 @@ public class Tutorial extends Activity {
 
     }
 
+    public String[] parseUrlString(String s) {
+        final String key = "chairid=";
+        final String wfkey = "wifimac=";
+        int pos = s.indexOf(key);
+        String blmac = "";
+        if (pos > 0) {
+            blmac = s.substring(pos + key.length());
+            pos = blmac.indexOf('&');
+            if (pos > 0) {
+                blmac = blmac.substring(0, pos);
+            }
+        }
+        String wfMac = "";
+        pos = s.indexOf(wfkey);
+        if (pos > 0) {
+            wfMac = s.substring(pos + wfkey.length());
+            pos = wfMac.indexOf('&');
+            if (pos > 0) {
+                wfMac = wfMac.substring(0, pos);
+            }
+        }
+
+        return new String[]{blmac, wfMac};
+    }
+
+    private boolean storeResults(String[] parseResults) {
+        String blmac = parseResults[0];
+        String wfmac = parseResults[1];
+        if (!blmac.equals("") && !wfmac.equals("")) {
+            SharedPreferences sharedPref = this.getSharedPreferences(
+                    getString(R.string.temp_preference_file_key), Context.MODE_PRIVATE);
+            sharedPref.edit().putBoolean("first_launch", false).commit();
+            sharedPref.edit().putString(BluetoothManager.MAC_KEY, blmac).commit();
+            sharedPref.edit().putString(MainActivity.WF_KEY, wfmac).commit();
+            Toast.makeText(getBaseContext(), "Got mac: " + wfmac, Toast.LENGTH_SHORT).show();
+            return true;
+        }
+        return false;
+    }
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        final String key = "chairid=";
+
         if (requestCode == 0) {
 
             if (data.hasExtra("SCAN_RESULT")) {
                 String contents = data.getStringExtra("SCAN_RESULT");
                 Log.d("Tutorial", contents);
-                int pos = contents.indexOf(key);
-                if (pos != -1) {
-                    String mac = contents.substring(pos + key.length());
-                    SharedPreferences sharedPref = this.getSharedPreferences(
-                            getString(R.string.temp_preference_file_key), Context.MODE_PRIVATE);
-                    sharedPref.edit().putBoolean("first_launch", false).commit();
-                    sharedPref.edit().putString(BluetoothManager.MAC_KEY, mac).commit();
+                String[] parseResults = parseUrlString(contents);
+                if (storeResults(parseResults)) {
                     finish();
                 } else {
-                    Toast.makeText(getBaseContext(), "Please Scan Chair QR Code", Toast.LENGTH_SHORT);
+                    Toast.makeText(getBaseContext(), "Please Scan Chair QR Code", Toast.LENGTH_SHORT).show();
                     pairQR(null);
                 }
 

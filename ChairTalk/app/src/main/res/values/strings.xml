@@ -14,10 +14,10 @@
     <string name="last_server_push_key">time.last_push_to_server</string>
 
     <string name="title_activity_tutorial">Tutorial</string>
-    <string name="dummy_button">Setup Chair</string>
+    <string name="bottom_button">Scan QR Code</string>
     <string name="dummy_content">Chair\nControl</string>
     <string name="tutorial_top">Control Your Chair</string>
-    <string name="tutorial_bottom">Cooling and heating,\n right at your fingertips!</string>
+    <string name="tutorial_bottom">Please tap NFC,\n or interact to scan QR code.</string>
     <string name="title_activity_bluetooth">BluetoothActivity</string>
     <string name="title_devices">Select Chair</string>
     <string name="unknown_device">Unknown Device</string>

@@ -36,4 +36,7 @@
 
     <string name="temp_key">temp_key</string>
     <string name="humidity_key">humidity_key</string>
+    <string name="ok">OK</string>
+    <string name="cancel">Cancel</string>
+    <string name="reset_title">Reset all local data?</string>
 </resources>

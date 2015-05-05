@@ -168,5 +168,9 @@ class BluetoothManager {
     void disconnect() {
         onDestroy();
         characteristic = null;
+        if (mBluetoothLeService != null) {
+            activity.unbindService(mServiceConnection);
+        }
+
     }
 }

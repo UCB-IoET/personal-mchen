@@ -38,18 +38,27 @@ public class UpdateTask extends QueryTask {
     }
 
     @Override
-    protected void processJsonObject(JSONObject jsonResponse) {
+    protected boolean processJsonObject(JSONObject jsonResponse) {
+        boolean ret = false;
+        int prevUpdateTime = context.getSharedPreferences(context.getString(
+                R.string.temp_preference_file_key), Context.MODE_PRIVATE).getInt(MainActivity.LAST_TIME, -1);
         for(Map.Entry<String, String> entry : MainActivity.jsonToKey.entrySet()) {
             String jsonKey = entry.getKey();
             String localKey = entry.getValue();
+
             try {
                 int value = jsonResponse.getInt(jsonKey);
-                updatePref(localKey, value);
+                if (localKey.equals(MainActivity.LAST_TIME) && value > prevUpdateTime) {
+                    updatePref(localKey, value);
+                    ret = true;
+                } else if (!localKey.equals(MainActivity.LAST_TIME)) {
+                    updatePref(localKey, value);
+                }
             } catch (JSONException e) {
                 Log.e("JSONHandling", "json parse error", e);
             }
         }
-
+        return ret;
     }
 
 }

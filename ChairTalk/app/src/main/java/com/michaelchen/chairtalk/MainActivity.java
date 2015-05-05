@@ -53,12 +53,11 @@ public class MainActivity extends ActionBarActivity {
     private SeekBar seekBackHeat;
     private static final String uri = "http://54.215.11.207:38001";
     private static final String QUERY_STRING = "http://shell.storm.pm:8079/api/query";
-    public static final String macAddr = "12345";
     public static final int refreshPeriod = 10000;
     public static final int smapDelay = 20000;
     private Timer timer = null;
     private BluetoothManager bluetoothManager = null;
-    private Date lastUpdate; //TODO: fix hack to prevent smap loop
+    private Date lastUpdate; //TODO: check to make sure smap loop never happens
 
     public static final String EXTRAS_DEVICE_NAME = "DEVICE_NAME";
     public static final String EXTRAS_DEVICE_ADDRESS = "DEVICE_ADDRESS";
@@ -409,7 +408,9 @@ public class MainActivity extends ActionBarActivity {
             jsonobj.put("bottomh", bottomHeat);
             jsonobj.put("temperature", temp);
             jsonobj.put("humidity", humidity);
-            jsonobj.put("macaddr", macAddr);
+            SharedPreferences sharedPreferences = getSharedPreferences(getString(R.string.temp_preference_file_key), Context.MODE_PRIVATE);
+            String wfmac = sharedPreferences.getString(WF_KEY, "");
+            jsonobj.put("macaddr", wfmac);
         } catch (JSONException e) {
 
         }
@@ -477,6 +478,7 @@ public class MainActivity extends ActionBarActivity {
 
     }
 
+    //@Deprecated, but allows direct query of smap should server fail
     private class SmapQueryAsyncTask extends AsyncTask<String, Void, Boolean> {
         private String uuid;
         public static final String QUERY_LINE = "select data before now where uuid = '%s'";
@@ -558,7 +560,9 @@ public class MainActivity extends ActionBarActivity {
 
     private void querySmap() {
         QueryTask task = new ServerQueryTask();
-        task.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+        SharedPreferences sharedPreferences = getSharedPreferences(getString(R.string.temp_preference_file_key), Context.MODE_PRIVATE);
+        String wfmac = sharedPreferences.getString(WF_KEY, "");
+        task.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, wfmac);
 //        numTasksComplete = 0;
 //        for(String uuid : uuidToKey.keySet()) {
 //            SmapQueryAsyncTask task =  new SmapQueryAsyncTask(uuid);
@@ -644,6 +648,11 @@ public class MainActivity extends ActionBarActivity {
         } catch (Exception e) {
             Toast.makeText(this, "Error initializing speech to text engine.", Toast.LENGTH_LONG).show();
         }
+    }
+
+    public void onSettingsClick(MenuItem item) {
+        Intent i = new Intent(this, SettingsActivity.class);
+        startActivity(i);
     }
 
     @Override

@@ -45,4 +45,5 @@
     <string name="request_pw">Enter Password:</string>
     <string name="wrong_pw">Incorrect password: This incident will be reported</string>
     <string name="no_bl">No Bluetooth Functionality,\n updates may be delayed.</string>
+    <string name="chair_desc">Connected to: </string>
 </resources>

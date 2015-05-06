@@ -130,6 +130,8 @@ public class MainActivity extends ActionBarActivity {
 //            String mDeviceName = intent.getStringExtra(EXTRAS_DEVICE_NAME);
             String mDeviceAddress = intent.getStringExtra(EXTRAS_DEVICE_ADDRESS);
             bluetoothManager = new BluetoothManager(this, mDeviceAddress);
+            TextView t = (TextView) findViewById(R.id.chair_desc);
+            t.setText(getString(R.string.chair_desc) + mDeviceAddress);
         } else {
             SharedPreferences sharedPreferences = getSharedPreferences(getString(R.string.temp_preference_file_key), Context.MODE_PRIVATE);
             String mac = sharedPreferences.getString(BluetoothManager.MAC_KEY, "");

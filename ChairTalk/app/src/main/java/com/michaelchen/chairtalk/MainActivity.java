@@ -74,6 +74,7 @@ public class MainActivity extends ActionBarActivity {
     static final String LAST_TIME = "Last Time";
     static final String WF_KEY = "wifi_mac";
     static final String FIRST_LAUNCH = "first_launch";
+    static final String SKIP_BL = "skip_bluetooth";
 
     static final Map<String, String> uuidToKey;
     static final Map<String, String> keyToUuid;
@@ -142,8 +143,12 @@ public class MainActivity extends ActionBarActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        if (bluetoothManager == null || !bluetoothManager.isConnected()) {
+        Intent i = getIntent();
+        if (i != null && i.getBooleanExtra(SKIP_BL, false)) {
+
+        } else if (bluetoothManager == null || !bluetoothManager.isConnected()) {
             initBle();
+            return;
         }
         rescheduleTimer(0);
         if (bluetoothManager != null) bluetoothManager.onResume();
@@ -152,7 +157,7 @@ public class MainActivity extends ActionBarActivity {
     @Override
     protected void onPause() {
         super.onPause();
-        timer.cancel();
+        if (timer != null) timer.cancel();
         if (bluetoothManager != null) bluetoothManager.onPause();
     }
 
@@ -177,7 +182,7 @@ public class MainActivity extends ActionBarActivity {
 
             public void onStopTrackingTouch(SeekBar seekBar) {
                 MainActivity.this.updatePref(BACK_FAN, currentPosition);
-                sendUpdate();
+                sendUpdateLocal();
             }
         });
 
@@ -195,7 +200,7 @@ public class MainActivity extends ActionBarActivity {
 
             public void onStopTrackingTouch(SeekBar seekBar) {
                 MainActivity.this.updatePref(BOTTOM_FAN, currentPosition);
-                sendUpdate();
+                sendUpdateLocal();
             }
         });
 
@@ -213,7 +218,7 @@ public class MainActivity extends ActionBarActivity {
 
             public void onStopTrackingTouch(SeekBar seekBar) {
                 MainActivity.this.updatePref(BACK_HEAT, currentPosition);
-                sendUpdate();
+                sendUpdateLocal();
             }
         });
 
@@ -231,7 +236,7 @@ public class MainActivity extends ActionBarActivity {
 
             public void onStopTrackingTouch(SeekBar seekBar) {
                 MainActivity.this.updatePref(BOTTOM_HEAT, currentPosition);
-                sendUpdate();
+                sendUpdateLocal();
             }
         });
     }
@@ -291,7 +296,7 @@ public class MainActivity extends ActionBarActivity {
         return e.commit();
     }
 
-    protected void sendUpdateSmap() {
+    protected void sendUpdateSmap(boolean fromFS) {
         SharedPreferences sharedPref = MainActivity.this.getSharedPreferences(
                 getString(R.string.temp_preference_file_key), Context.MODE_PRIVATE);
         int backFanPos = sharedPref.getInt(BACK_FAN, 0);
@@ -301,7 +306,7 @@ public class MainActivity extends ActionBarActivity {
         boolean inChair = sharedPref.getBoolean(getString(R.string.in_chair_key), false);
         int temp = sharedPref.getInt(getString(R.string.temp_key), 0);
         int humidity = sharedPref.getInt(getString(R.string.humidity_key), 0);
-        JSONObject jsonobj = createJsonObject(backFanPos, bottomFanPos, backHeatPos, bottomHeatPos, inChair, temp, humidity);
+        JSONObject jsonobj = createJsonObject(backFanPos, bottomFanPos, backHeatPos, bottomHeatPos, inChair, temp, humidity, fromFS);
         HttpAsyncTask task = new HttpAsyncTask(jsonobj);
         task.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, uri);
     }
@@ -329,10 +334,11 @@ public class MainActivity extends ActionBarActivity {
         timer.scheduleAtFixedRate(timerTask, delay, refreshPeriod);
     }
 
-    public void sendUpdate() {
+    public void sendUpdateLocal() {
+        // used to update everything if user changes value from app
         rescheduleTimer();
         sendUpdateBle();
-        sendUpdateSmap();
+        sendUpdateSmap(false);
         lastUpdate = new Date();
     }
 
@@ -363,7 +369,7 @@ public class MainActivity extends ActionBarActivity {
         e.apply();
         e.commit();
         rescheduleTimer();
-        sendUpdateSmap();
+        sendUpdateSmap(true);
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
@@ -399,7 +405,7 @@ public class MainActivity extends ActionBarActivity {
     }
 
     private JSONObject createJsonObject(int backFan, int bottomFan, int backHeat, int bottomHeat, boolean inChair,
-                                        int temp, int humidity) {
+                                        int temp, int humidity, boolean fromFS) {
         JSONObject jsonobj = new JSONObject();
         JSONObject header = new JSONObject();
         try {
@@ -418,6 +424,7 @@ public class MainActivity extends ActionBarActivity {
             jsonobj.put("bottomh", bottomHeat);
             jsonobj.put("temperature", temp);
             jsonobj.put("humidity", humidity);
+            jsonobj.put("fromFS", fromFS);
             SharedPreferences sharedPreferences = getSharedPreferences(getString(R.string.temp_preference_file_key), Context.MODE_PRIVATE);
             String wfmac = sharedPreferences.getString(WF_KEY, "");
             jsonobj.put("macaddr", wfmac);
@@ -696,7 +703,7 @@ public class MainActivity extends ActionBarActivity {
         MainActivity.this.updatePref(BOTTOM_FAN, MAX_SEEKBAR_POS);
         MainActivity.this.updatePref(BACK_HEAT, MIN_SEEKBAR_POS);
         MainActivity.this.updatePref(BOTTOM_HEAT, MIN_SEEKBAR_POS);
-        sendUpdate();
+        sendUpdateLocal();
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
@@ -710,7 +717,7 @@ public class MainActivity extends ActionBarActivity {
         MainActivity.this.updatePref(BOTTOM_FAN, MIN_SEEKBAR_POS);
         MainActivity.this.updatePref(BACK_HEAT, MAX_SEEKBAR_POS);
         MainActivity.this.updatePref(BOTTOM_HEAT, MAX_SEEKBAR_POS);
-        sendUpdate();
+        sendUpdateLocal();
         runOnUiThread(new Runnable() {
             @Override
             public void run() {

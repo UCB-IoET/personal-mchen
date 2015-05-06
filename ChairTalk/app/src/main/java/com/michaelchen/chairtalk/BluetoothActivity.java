@@ -123,7 +123,7 @@ public class BluetoothActivity extends ListActivity{
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         // User chose not to enable Bluetooth.
         if (requestCode == REQUEST_ENABLE_BT && resultCode == Activity.RESULT_CANCELED) {
-            finish();
+            onBackPressed();
             return;
         }
         super.onActivityResult(requestCode, resultCode, data);
@@ -134,6 +134,18 @@ public class BluetoothActivity extends ListActivity{
         scanLeDevice(false);
         mLeDeviceListAdapter.clear();
     }
+
+    @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+        Intent i = new Intent(this, MainActivity.class);
+        i.putExtra(MainActivity.SKIP_BL, true);
+        startActivity(i);
+        finish();
+        Toast.makeText(getBaseContext(), getString(R.string.no_bl), Toast.LENGTH_SHORT).show();
+        return;
+    }
+
     @Override
     protected void onListItemClick(ListView l, View v, int position, long id) {
         final BluetoothDevice device = mLeDeviceListAdapter.getDevice(position).getDevice();

@@ -3,6 +3,7 @@ package com.michaelchen.chairtalk;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.AsyncTask;
+import android.preference.PreferenceManager;
 import android.util.Log;
 
 import org.apache.http.HttpResponse;
@@ -40,6 +41,7 @@ public class UpdateTask extends QueryTask {
     @Override
     protected boolean processJsonObject(JSONObject jsonResponse) {
         boolean ret = false;
+        int currentTime = 0;
         int prevUpdateTime = context.getSharedPreferences(context.getString(
                 R.string.temp_preference_file_key), Context.MODE_PRIVATE).getInt(MainActivity.LAST_TIME, -1);
         for(Map.Entry<String, String> entry : MainActivity.jsonToKey.entrySet()) {
@@ -48,18 +50,25 @@ public class UpdateTask extends QueryTask {
 
             try {
                 int value = jsonResponse.getInt(jsonKey);
-                if (localKey.equals(MainActivity.LAST_TIME) && value > prevUpdateTime) {
-                    updatePref(localKey, value);
-                    ret = true;
-                } else if (!localKey.equals(MainActivity.LAST_TIME)) {
-                    updatePref(localKey, value);
+                if (localKey.equals(MainActivity.LAST_TIME)) {
+                    currentTime = value;
+                    if (value > prevUpdateTime) {
+                        updatePref(localKey, value);
+                        ret = true;
+                    } else {
+                        Log.d("Update task", "rejected timestamp: " + value + ", needed: " + prevUpdateTime);
+                    }
                 } else {
-                    Log.d("Update task", "rejected timestamp: " + value + ", needed: " + prevUpdateTime);
+                    updatePref(localKey, value);
                 }
             } catch (JSONException e) {
                 Log.e("JSONHandling", "json parse error", e);
             }
         }
+
+        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(context);
+        String name = sp.getString(SettingsActivity.NAME, "");
+
         return ret;
     }
 

@@ -396,9 +396,13 @@ public class MainActivity extends ActionBarActivity {
     }
 
     private void sendUpdateBle() {
+        boolean result = false;
         if (bluetoothManager != null) {
-            bluetoothManager.writeData(getByteStatus());
+            if (bluetoothManager.writeData(getByteStatus())) {
+                result = true;
+            }
         }
+        if (!result) Toast.makeText(getApplicationContext(), getString(R.string.no_bl), Toast.LENGTH_SHORT).show();
     }
 
     void disconnectBluetoothManager() {

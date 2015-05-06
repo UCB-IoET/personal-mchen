@@ -146,6 +146,10 @@ public class BluetoothActivity extends ListActivity{
         return;
     }
 
+    public void refresh(View view) {
+        recreate();
+    }
+
     @Override
     protected void onListItemClick(ListView l, View v, int position, long id) {
         final BluetoothDevice device = mLeDeviceListAdapter.getDevice(position).getDevice();

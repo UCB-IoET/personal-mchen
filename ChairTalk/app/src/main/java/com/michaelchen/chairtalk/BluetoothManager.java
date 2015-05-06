@@ -150,13 +150,14 @@ class BluetoothManager {
 
     }
 
-    void writeData(byte[] data) {
-        if (characteristic == null) {
-            return;
+    boolean writeData(byte[] data) {
+        if (characteristic == null || !mConnected || mBluetoothLeService == null) {
+            return false;
         }
 
         characteristic.setValue(data);
         mBluetoothLeService.writeCharacteristic(characteristic);
+        return true;
     }
 
 

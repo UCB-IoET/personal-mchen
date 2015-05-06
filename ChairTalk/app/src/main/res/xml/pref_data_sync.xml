@@ -18,4 +18,6 @@
 
     </Preference>
 
+    <Preference android:title="@string/reset_bl" android:key="reset_bl"></Preference>
+
 </PreferenceScreen>

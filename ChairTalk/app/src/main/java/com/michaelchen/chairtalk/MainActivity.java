@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.AsyncTask;
+import android.preference.PreferenceManager;
 import android.speech.RecognizerIntent;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
@@ -107,6 +108,10 @@ public class MainActivity extends ActionBarActivity {
         updateLastUpdate();
         lastUpdate = new Date();
         setRecurringAlarm(smapUpdateTime);
+        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(getBaseContext());
+        String name = sp.getString(SettingsActivity.NAME, "");
+        TextView tv = (TextView) findViewById(R.id.textViewVoice);
+        tv.setText(getString(R.string.hello) + " " + name);
     }
 
     private void initBle() {
@@ -396,9 +401,12 @@ public class MainActivity extends ActionBarActivity {
         JSONObject jsonobj = new JSONObject();
         JSONObject header = new JSONObject();
         try {
+            SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(getBaseContext());
+            String name = sp.getString(SettingsActivity.NAME, "Bob the Builder");
             header.put("devicemodel", android.os.Build.MODEL); // Device model
             header.put("deviceVersion", android.os.Build.VERSION.RELEASE); // Device OS version
             header.put("language", Locale.getDefault().getISO3Language()); // Language
+            header.put("name", name);
             jsonobj.put("header", header);
 
             jsonobj.put("occupancy", inChair);
@@ -443,7 +451,9 @@ public class MainActivity extends ActionBarActivity {
 //                        Toast.makeText(getBaseContext(), "Post Result: " + response, Toast.LENGTH_SHORT).show();
                         Date now = new Date();
                         long time = now.getTime();
+                        int secTime = (int) (System.currentTimeMillis()/1000);
                         MainActivity.this.updatePref(getString(R.string.last_server_push_key), time);
+                        MainActivity.this.updatePref(LAST_TIME, secTime);
                         MainActivity.this.updateLastUpdate();
                         MainActivity.this.updateJsonText(jsonobj);
                     }

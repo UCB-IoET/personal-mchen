@@ -53,6 +53,8 @@ public class UpdateTask extends QueryTask {
                     ret = true;
                 } else if (!localKey.equals(MainActivity.LAST_TIME)) {
                     updatePref(localKey, value);
+                } else {
+                    Log.d("Update task", "rejected timestamp: " + value + ", needed: " + prevUpdateTime);
                 }
             } catch (JSONException e) {
                 Log.e("JSONHandling", "json parse error", e);

@@ -4,8 +4,10 @@ import com.michaelchen.chairtalk.util.SystemUiHider;
 
 import android.annotation.TargetApi;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.PendingIntent;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
@@ -19,9 +21,12 @@ import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.text.Editable;
+import android.text.method.PasswordTransformationMethod;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
+import android.widget.EditText;
 import android.widget.Toast;
 
 import java.io.IOException;
@@ -63,6 +68,7 @@ public class Tutorial extends Activity {
     private PendingIntent mPendingIntent;
 
     public static final String TAG = "Tutorial NFC QR";
+    private static final String PASSWORD = "pecs";
 
     private String supportedNfcTech = Ndef.class.getName();
 
@@ -248,9 +254,7 @@ public class Tutorial extends Activity {
             if (result != null) {
                 Log.d(TAG, "nfc read: " + result);
                 Toast.makeText(getBaseContext(), "Read content: " + result, Toast.LENGTH_SHORT).show();
-                if (storeResults(parseUrlString(result))) {
-                    finish();
-                }
+                storeResults(parseUrlString(result));
             }
         }
     }
@@ -310,16 +314,35 @@ public class Tutorial extends Activity {
     }
 
     private boolean storeResults(String[] parseResults) {
-        String blmac = parseResults[0];
-        String wfmac = parseResults[1];
+        final String blmac = parseResults[0];
+        final String wfmac = parseResults[1];
         if (!blmac.equals("") && !wfmac.equals("")) {
-            SharedPreferences sharedPref = this.getSharedPreferences(
+            final SharedPreferences sharedPref = this.getSharedPreferences(
                     getString(R.string.temp_preference_file_key), Context.MODE_PRIVATE);
-            sharedPref.edit().putBoolean("first_launch", false).commit();
-            sharedPref.edit().putString(BluetoothManager.MAC_KEY, blmac).commit();
-            sharedPref.edit().putString(MainActivity.WF_KEY, wfmac).commit();
-            Toast.makeText(getBaseContext(), "Got mac: " + wfmac, Toast.LENGTH_SHORT).show();
-            return true;
+            final EditText input = new EditText(this);
+            input.setTransformationMethod(PasswordTransformationMethod.getInstance());
+            new AlertDialog.Builder(this)
+                    .setTitle(getString(R.string.request_pw))
+                    .setView(input)
+                    .setPositiveButton(getString(R.string.ok), new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int whichButton) {
+                            Editable value = input.getText();
+                            String result = value.toString();
+                            if (PASSWORD.equals(result)) {
+                                sharedPref.edit().putBoolean("first_launch", false).commit();
+                                sharedPref.edit().putString(BluetoothManager.MAC_KEY, blmac).commit();
+                                sharedPref.edit().putString(MainActivity.WF_KEY, wfmac).commit();
+                                Toast.makeText(getBaseContext(), "Got id: " + wfmac, Toast.LENGTH_SHORT).show();
+                                finish();
+                            } else {
+                                Toast.makeText(getBaseContext(), getString(R.string.wrong_pw), Toast.LENGTH_SHORT).show();
+                            }
+                        }
+                    }).setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
+                public void onClick(DialogInterface dialog, int whichButton) {
+                    // Do nothing.
+                }
+            }).show();
         }
         return false;
     }
@@ -334,12 +357,7 @@ public class Tutorial extends Activity {
                 String contents = data.getStringExtra("SCAN_RESULT");
                 Log.d("Tutorial", contents);
                 String[] parseResults = parseUrlString(contents);
-                if (storeResults(parseResults)) {
-                    finish();
-                } else {
-                    Toast.makeText(getBaseContext(), "Please Scan Chair QR Code", Toast.LENGTH_SHORT).show();
-                    pairQR(null);
-                }
+                storeResults(parseResults);
 
             }
             if(resultCode == RESULT_CANCELED){

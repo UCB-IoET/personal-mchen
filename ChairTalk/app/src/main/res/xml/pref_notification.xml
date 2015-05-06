@@ -4,8 +4,9 @@
          when checked/unchecked. -->
     <CheckBoxPreference
         android:key="notifications_new_message"
-        android:title="@string/pref_title_new_message_notifications"
-        android:defaultValue="true" />
+        android:title="@string/pref_title_notify_sitting"
+        android:summary="@string/pref_sum_notify_sitting"
+        android:defaultValue="false" />
 
     <!-- Allows the user to choose a ringtone in the 'notification' category. -->
     <!-- NOTE: This preference will be enabled only when the checkbox above is checked. -->

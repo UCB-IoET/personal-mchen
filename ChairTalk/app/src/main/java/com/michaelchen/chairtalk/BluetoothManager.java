@@ -1,8 +1,5 @@
 package com.michaelchen.chairtalk;
 
-import android.app.Activity;
-import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;
 import android.content.BroadcastReceiver;
@@ -118,7 +115,14 @@ class BluetoothManager {
     }
 
     void onDestroy() {
-        activity.unbindService(mServiceConnection);
+        onPause();
+        if (mBluetoothLeService != null) {
+            mBluetoothLeService.disconnect();
+            mBluetoothLeService.close();
+        }
+        if (mServiceConnection != null) {
+            activity.unbindService(mServiceConnection);
+        }
         mBluetoothLeService = null;
     }
 

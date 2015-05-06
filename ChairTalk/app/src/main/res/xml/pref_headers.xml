@@ -10,6 +10,6 @@
         android:title="@string/pref_header_notifications" />
 
     <header android:fragment="com.michaelchen.chairtalk.SettingsActivity$DataSyncPreferenceFragment"
-        android:title="@string/pref_header_data_sync" />
+        android:title="@string/pref_header_data" />
 
 </preference-headers>

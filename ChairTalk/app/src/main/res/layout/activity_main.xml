@@ -20,6 +20,45 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textAppearance="?android:attr/textAppearanceSmall"
+            android:text="@string/heat_section"
+            android:id="@+id/textViewHeatSection" />
+
+        <TextView
+            android:layout_height="2dip"
+            android:layout_width="match_parent"
+            android:background="#ff050690"
+            android:layout_marginBottom="2dp"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAppearance="?android:attr/textAppearanceMedium"
+            android:text="@string/seek_back_heat"
+            android:id="@+id/textViewBackHeat" />
+
+        <SeekBar
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/seekBarBackHeat"
+            android:max="100"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAppearance="?android:attr/textAppearanceMedium"
+            android:text="@string/seek_bottom_heat"
+            android:id="@+id/textViewBottomHeat" />
+
+        <SeekBar
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/seekBarBottomHeat"
+            android:max="100"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAppearance="?android:attr/textAppearanceSmall"
             android:text="@string/fan_section"
             android:id="@+id/textViewFanSection" />
 
@@ -56,45 +95,6 @@
             android:id="@+id/seekBarBottomFan"
             android:max="100"/>
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textAppearance="?android:attr/textAppearanceSmall"
-            android:text="@string/heat_section"
-            android:id="@+id/textViewHeatSection" />
-
-        <TextView
-            android:layout_height="2dip"
-            android:layout_width="match_parent"
-            android:background="#ff050690"
-            android:layout_marginBottom="2dp"/>
-
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textAppearance="?android:attr/textAppearanceMedium"
-            android:text="@string/seek_back_heat"
-            android:id="@+id/textViewBackHeat" />
-
-        <SeekBar
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:id="@+id/seekBarBackHeat"
-            android:max="100"/>
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textAppearance="?android:attr/textAppearanceMedium"
-            android:text="@string/seek_bottom_heat"
-            android:id="@+id/textViewBottomHeat" />
-
-        <SeekBar
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:id="@+id/seekBarBottomHeat"
-            android:max="100"/>
 
         <TextView
             android:layout_width="wrap_content"

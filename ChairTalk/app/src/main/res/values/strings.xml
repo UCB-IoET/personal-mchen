@@ -39,4 +39,9 @@
     <string name="ok">OK</string>
     <string name="cancel">Cancel</string>
     <string name="reset_title">Reset all local data?</string>
+    <string name="hello">Hello</string>
+    <string name="request_qr">Please Scan Chair QR Code</string>
+
+    <string name="request_pw">Enter Password:</string>
+    <string name="wrong_pw">Incorrect password: This incident will be reported</string>
 </resources>

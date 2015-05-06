@@ -73,6 +73,7 @@ public class MainActivity extends ActionBarActivity {
     static final String BOTTOM_HEAT = "Bottom Heat";
     static final String LAST_TIME = "Last Time";
     static final String WF_KEY = "wifi_mac";
+    static final String FIRST_LAUNCH = "first_launch";
 
     static final Map<String, String> uuidToKey;
     static final Map<String, String> keyToUuid;
@@ -102,6 +103,14 @@ public class MainActivity extends ActionBarActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        SharedPreferences sharedPref = this.getSharedPreferences(
+                getString(R.string.temp_preference_file_key), Context.MODE_PRIVATE);
+        if (sharedPref.getBoolean(FIRST_LAUNCH, true)) {
+            Intent i = new Intent(this, Tutorial.class);
+            startActivity(i);
+            finish();
+            return;
+        }
         setContentView(R.layout.activity_main);
         initSeekbarListeners();
         setSeekbarPositions();
@@ -116,7 +125,7 @@ public class MainActivity extends ActionBarActivity {
 
     private void initBle() {
         final Intent intent = getIntent();
-        if (intent.hasExtra(EXTRAS_DEVICE_NAME) && intent.hasExtra(EXTRAS_DEVICE_ADDRESS)) {
+        if (intent != null && intent.hasExtra(EXTRAS_DEVICE_NAME) && intent.hasExtra(EXTRAS_DEVICE_ADDRESS)) {
 //            String mDeviceName = intent.getStringExtra(EXTRAS_DEVICE_NAME);
             String mDeviceAddress = intent.getStringExtra(EXTRAS_DEVICE_ADDRESS);
             bluetoothManager = new BluetoothManager(this, mDeviceAddress);
@@ -135,13 +144,6 @@ public class MainActivity extends ActionBarActivity {
         super.onResume();
         if (bluetoothManager == null || !bluetoothManager.isConnected()) {
             initBle();
-        }
-        SharedPreferences sharedPref = this.getSharedPreferences(
-                getString(R.string.temp_preference_file_key), Context.MODE_PRIVATE);
-        if (sharedPref.getBoolean("first_launch", true)) {
-            Intent i = new Intent(this, Tutorial.class);
-            startActivity(i);
-//            sharedPref.edit().putBoolean("first_launch", false).commit();
         }
         rescheduleTimer(0);
         if (bluetoothManager != null) bluetoothManager.onResume();

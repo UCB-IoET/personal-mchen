@@ -250,11 +250,16 @@ public class Tutorial extends Activity {
         }
 
         @Override
-        protected void onPostExecute(String result) {
+        protected void onPostExecute(final String result) {
             if (result != null) {
                 Log.d(TAG, "nfc read: " + result);
                 Toast.makeText(getBaseContext(), "Read content: " + result, Toast.LENGTH_SHORT).show();
-                storeResults(parseUrlString(result));
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        storeResults(parseUrlString(result));
+                    }
+                });
             }
         }
     }
@@ -329,11 +334,12 @@ public class Tutorial extends Activity {
                             Editable value = input.getText();
                             String result = value.toString();
                             if (PASSWORD.equals(result)) {
-                                sharedPref.edit().putBoolean("first_launch", false).commit();
+                                sharedPref.edit().putBoolean(MainActivity.FIRST_LAUNCH, false).commit();
                                 sharedPref.edit().putString(BluetoothManager.MAC_KEY, blmac).commit();
                                 sharedPref.edit().putString(MainActivity.WF_KEY, wfmac).commit();
                                 Toast.makeText(getBaseContext(), "Got id: " + wfmac, Toast.LENGTH_SHORT).show();
-                                finish();
+                                Intent i = new Intent(Tutorial.this, MainActivity.class);
+                                startActivity(i);
                             } else {
                                 Toast.makeText(getBaseContext(), getString(R.string.wrong_pw), Toast.LENGTH_SHORT).show();
                             }
@@ -353,7 +359,7 @@ public class Tutorial extends Activity {
 
         if (requestCode == 0) {
 
-            if (data.hasExtra("SCAN_RESULT")) {
+            if (data != null && data.hasExtra("SCAN_RESULT")) {
                 String contents = data.getStringExtra("SCAN_RESULT");
                 Log.d("Tutorial", contents);
                 String[] parseResults = parseUrlString(contents);

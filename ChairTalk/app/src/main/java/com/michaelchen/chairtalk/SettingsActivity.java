@@ -47,6 +47,10 @@ public class SettingsActivity extends PreferenceActivity {
     public static final String NAME = "name";
     public static final String LAST_OUT_OF_CHAIR = "last_out_of_chair";
     public static final String NOTIFICATIONS = "notifications_new_message";
+    public static final String NOTIFICATIONS_RINGTONE = "notifications_new_message_ringtone";
+    public static final String NOTIFICATIONS_VIBRATE = "notifications_new_message_vibrate";
+    public static final String NOTIFICATIONS_FREQUENCY = "notif_frequency";
+
 
 
     @Override
@@ -90,8 +94,9 @@ public class SettingsActivity extends PreferenceActivity {
         bindPreferenceSummaryToValue(findPreference(NAME));
 //        bindPreferenceSummaryToValue(findPreference("example_list"));
         bindPreferenceSummaryToValueBool(findPreference(NOTIFICATIONS));
-        bindPreferenceSummaryToValueBool(findPreference("notifications_new_message_vibrate"));
-//        bindPreferenceSummaryToValue(findPreference("notifications_new_message_ringtone"));
+        bindPreferenceSummaryToValueBool(findPreference(NOTIFICATIONS_VIBRATE));
+        bindPreferenceSummaryToValue(findPreference(NOTIFICATIONS_RINGTONE));
+        bindPreferenceSummaryToValue(findPreference(NOTIFICATIONS_FREQUENCY));
         bindPreferenceSummaryToValue(findPreference("sync_frequency"));
         Preference myPref = (Preference) findPreference("reset");
         myPref.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
@@ -258,6 +263,18 @@ public class SettingsActivity extends PreferenceActivity {
                 PreferenceManager
                         .getDefaultSharedPreferences(preference.getContext())
                         .getBoolean(preference.getKey(), false));
+    }
+
+    private static void bindPreferenceSummaryToValueInt(Preference preference) {
+        // Set the listener to watch for value changes.
+        preference.setOnPreferenceChangeListener(sBindPreferenceSummaryToValueListener);
+
+        // Trigger the listener immediately with the preference's
+        // current value.
+        sBindPreferenceSummaryToValueListener.onPreferenceChange(preference,
+                PreferenceManager
+                        .getDefaultSharedPreferences(preference.getContext())
+                        .getInt(preference.getKey(), 1));
     }
 
 }

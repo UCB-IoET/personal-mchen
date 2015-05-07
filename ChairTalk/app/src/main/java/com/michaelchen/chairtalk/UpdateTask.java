@@ -3,7 +3,11 @@ package com.michaelchen.chairtalk;
 import android.app.NotificationManager;
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.media.Ringtone;
+import android.media.RingtoneManager;
+import android.net.Uri;
 import android.os.AsyncTask;
+import android.os.Vibrator;
 import android.preference.PreferenceManager;
 import android.support.v4.app.NotificationCompat;
 import android.util.Log;
@@ -73,7 +77,13 @@ public class UpdateTask extends QueryTask {
                 SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(context);
                 long lastTimeOutChair = sp.getLong(SettingsActivity.LAST_OUT_OF_CHAIR, time);
                 boolean notify = sp.getBoolean(SettingsActivity.NOTIFICATIONS, false);
-                if (notify && inChair && (time - lastTimeOutChair) > 1000*30) {
+                int notifPeriod;
+                try {
+                    notifPeriod = Integer.parseInt(sp.getString(SettingsActivity.NOTIFICATIONS_FREQUENCY, "1"));
+                } catch (Exception e) {
+                    notifPeriod = 1;
+                }
+                if (notify && inChair && (time - lastTimeOutChair) > 1000*60*notifPeriod) {
                     // currently set to 30 seconds
                     // send notification for sitting in the chair for too long
                     NotificationCompat.Builder mBuilder =
@@ -86,7 +96,18 @@ public class UpdateTask extends QueryTask {
                     int mNotificationId = 12345;
                     mNotifyMgr.notify(mNotificationId, mBuilder.build());
 
-                } if (!inChair || sp.getLong(SettingsActivity.LAST_OUT_OF_CHAIR, -1) == -1) {
+                    boolean vibrate = sp.getBoolean(SettingsActivity.NOTIFICATIONS_VIBRATE, false);
+                    if (vibrate) {
+                        Vibrator v = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
+                        v.vibrate(1000);
+                    }
+
+                    String alarms = sp.getString(SettingsActivity.NOTIFICATIONS_RINGTONE, "default ringtone");
+                    Uri uri = Uri.parse(alarms);
+                    Ringtone r = RingtoneManager.getRingtone(context.getApplicationContext(), uri);
+                    r.play();
+
+                } else if (!inChair || sp.getLong(SettingsActivity.LAST_OUT_OF_CHAIR, -1) == -1) {
                     sp.edit().putLong(SettingsActivity.LAST_OUT_OF_CHAIR, time).commit();
                 }
             }

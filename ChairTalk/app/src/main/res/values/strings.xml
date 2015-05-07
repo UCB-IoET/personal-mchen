@@ -46,4 +46,7 @@
     <string name="wrong_pw">Incorrect password: This incident will be reported</string>
     <string name="no_bl">No Bluetooth Functionality,\n updates may be delayed.</string>
     <string name="chair_desc">Connected to: </string>
+
+    <string name="sit_notif_title">PECS Chairtalk: Time to stand up!</string>
+    <string name="sit_notif_content">You\'ve been sitting for a long time.</string>
 </resources>

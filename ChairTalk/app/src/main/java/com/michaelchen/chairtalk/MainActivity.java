@@ -53,7 +53,6 @@ public class MainActivity extends ActionBarActivity {
     private SeekBar seekBottomHeat;
     private SeekBar seekBackHeat;
     private static final String uri = "http://54.215.11.207:38001";
-    private static final String QUERY_STRING = "http://shell.storm.pm:8079/api/query";
     public static final int refreshPeriod = 10000;
     public static final int smapDelay = 20000;
     private Timer timer = null;
@@ -65,7 +64,7 @@ public class MainActivity extends ActionBarActivity {
     protected static final int REQUEST_OK = 1;
     protected static final int BLUETOOTH_REQUEST = 33;
 
-    public static final long smapUpdateTime = AlarmManager.INTERVAL_HALF_HOUR;
+    public static final long smapUpdateTime = 15000; //AlarmManager.INTERVAL_HALF_HOUR;
 
     static final String BACK_FAN = "Back Fan";
     static final String BOTTOM_FAN = "Bottom Fan";

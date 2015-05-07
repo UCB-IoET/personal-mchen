@@ -45,6 +45,8 @@ public class SettingsActivity extends PreferenceActivity {
      */
     private static final boolean ALWAYS_SIMPLE_PREFS = true;
     public static final String NAME = "name";
+    public static final String LAST_OUT_OF_CHAIR = "last_out_of_chair";
+    public static final String NOTIFICATIONS = "notifications_new_message";
 
 
     @Override
@@ -87,6 +89,8 @@ public class SettingsActivity extends PreferenceActivity {
         // to reflect the new value, per the Android Design guidelines.
         bindPreferenceSummaryToValue(findPreference(NAME));
 //        bindPreferenceSummaryToValue(findPreference("example_list"));
+        bindPreferenceSummaryToValueBool(findPreference(NOTIFICATIONS));
+        bindPreferenceSummaryToValueBool(findPreference("notifications_new_message_vibrate"));
 //        bindPreferenceSummaryToValue(findPreference("notifications_new_message_ringtone"));
         bindPreferenceSummaryToValue(findPreference("sync_frequency"));
         Preference myPref = (Preference) findPreference("reset");
@@ -242,6 +246,18 @@ public class SettingsActivity extends PreferenceActivity {
                 PreferenceManager
                         .getDefaultSharedPreferences(preference.getContext())
                         .getString(preference.getKey(), ""));
+    }
+
+    private static void bindPreferenceSummaryToValueBool(Preference preference) {
+        // Set the listener to watch for value changes.
+        preference.setOnPreferenceChangeListener(sBindPreferenceSummaryToValueListener);
+
+        // Trigger the listener immediately with the preference's
+        // current value.
+        sBindPreferenceSummaryToValueListener.onPreferenceChange(preference,
+                PreferenceManager
+                        .getDefaultSharedPreferences(preference.getContext())
+                        .getBoolean(preference.getKey(), false));
     }
 
 }

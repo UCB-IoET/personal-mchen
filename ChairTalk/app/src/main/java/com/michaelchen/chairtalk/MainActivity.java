@@ -52,7 +52,7 @@ public class MainActivity extends ActionBarActivity {
     private SeekBar seekBackFan;
     private SeekBar seekBottomHeat;
     private SeekBar seekBackHeat;
-    private static final String uri = "http://54.215.11.207:38001";
+    private static final String uri = "http://169.229.137.160:38001";
     private static final String QUERY_STRING = "http://shell.storm.pm:8079/api/query";
     public static final int refreshPeriod = 10000;
     public static final int smapDelay = 20000;
